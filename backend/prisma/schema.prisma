@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  nome      String
+  cpf       String   @unique
+  dataNascimento DateTime
+  telefone  String
+  email     String   @unique
+  senha     String
+  fotoBase64 String?  // Foto em base64 (opcional)
+  
+  role      String   @default("MEMBER") // ADMIN, MEMBER
+  status    String   @default("PENDENTE") // PENDENTE, ATIVO, INATIVO
+  tipoMembro String?  // INICIANTE, FORMANDO, PROFESSO
+  
+  endereco  Endereco?
+  contribuicaoAnual ContribuicaoAnual[]
+  contribuicaoMensal ContribuicaoMensal[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Endereco {
+  id      String   @id @default(cuid())
+  rua     String
+  numero  String
+  bairro  String
+  cidade  String
+  estado  String
+  cep     String
+  
+  userId  String   @unique
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContribuicaoAnual {
+  id            String   @id @default(cuid())
+  ano           Int
+  status        String   @default("PENDENTE") // PAGO, PENDENTE
+  dataPagamento DateTime?
+  
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, ano])
+}
+
+model ContribuicaoMensal {
+  id            String   @id @default(cuid())
+  mes           Int      // 1 a 12
+  ano           Int
+  status        String   @default("PENDENTE") // PAGO, PENDENTE
+  dataPagamento DateTime?
+  
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, mes, ano])
+}
+
+model Config {
+  id                    String   @id @default("sistema-ofs")
+  nomeFraternidade      String?
+  logoBase64            String?  // Logo do sistema em base64
+  valorAnual            Float    @default(0)
+  descricaoAnual        String?  // Descrição do valor anual
+  valorMensal           Float    @default(0)
+  descricaoMensal       String?  // Descrição do valor mensal
+  chavePix              String?
+  qrcodePixBase64       String?  // QR code PIX em base64
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
