@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { configService } from '../services/ConfigService';
-import { z } from 'zod';
+import { Request, Response } from "express";
+import { configService } from "../services/ConfigService.js";
+import { z } from "zod";
 
 const updateConfigSchema = z.object({
   nomeFraternidade: z.string().nullable().optional(),
@@ -10,7 +10,7 @@ const updateConfigSchema = z.object({
   valorMensal: z.number().optional(),
   descricaoMensal: z.string().nullable().optional(),
   chavePix: z.string().optional(),
-  qrcodePixBase64: z.string().nullable().optional()
+  qrcodePixBase64: z.string().nullable().optional(),
 });
 
 export class ConfigController {
@@ -19,13 +19,13 @@ export class ConfigController {
       console.log("📖 Recuperando configurações...");
       const config = await configService.getConfig();
       console.log("✅ Configurações encontradas:", config);
-      
+
       res.json(config);
     } catch (error) {
-      console.error('❌ Erro ao obter configurações:', error);
+      console.error("❌ Erro ao obter configurações:", error);
       res.status(500).json({
         success: false,
-        message: 'Erro ao obter configurações'
+        message: "Erro ao obter configurações",
       });
     }
   }
@@ -34,32 +34,32 @@ export class ConfigController {
     try {
       console.log("📝 Recebendo requisição para atualizar config");
       console.log("📊 Dados recebidos:", req.body);
-      
+
       const validatedData = updateConfigSchema.parse(req.body);
       console.log("✅ Dados validados:", validatedData);
-      
+
       const config = await configService.updateConfig(validatedData);
       console.log("💾 Configuração salva:", config);
 
       res.json({
         success: true,
-        message: 'Configurações atualizadas com sucesso',
-        data: config
+        message: "Configurações atualizadas com sucesso",
+        data: config,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         console.error("❌ Erro de validação:", error.errors);
         return res.status(400).json({
           success: false,
-          message: 'Dados inválidos',
-          errors: error.errors
+          message: "Dados inválidos",
+          errors: error.errors,
         });
       }
 
-      console.error('❌ Erro ao atualizar configurações:', error);
+      console.error("❌ Erro ao atualizar configurações:", error);
       res.status(500).json({
         success: false,
-        message: 'Erro ao atualizar configurações'
+        message: "Erro ao atualizar configurações",
       });
     }
   }
