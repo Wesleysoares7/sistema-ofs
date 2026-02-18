@@ -61,7 +61,7 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, senha);
       showToast("Login realizado com sucesso!", "success");
-      
+
       // Redirecionar baseado no role
       setTimeout(() => {
         const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -100,9 +100,7 @@ export const LoginPage: React.FC = () => {
             <h1 className="text-4xl font-bold mb-2">🕊️</h1>
           )}
           <h2 className="text-2xl font-bold text-gray-800">OFS</h2>
-          <p className="text-gray-600 text-sm">
-            {tituloSistema}
-          </p>
+          <p className="text-gray-600 text-sm">{tituloSistema}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -137,13 +135,29 @@ export const LoginPage: React.FC = () => {
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
               >
                 {showSenha ? (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                    <path
+                      fillRule="evenodd"
+                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-14-14zM10 3C5.522 3 1.732 5.943.458 10c.3.959.774 1.877 1.403 2.734l1.414-1.414A6 6 0 1110 9a1 1 0 00-2 0 4 4 0 11-4.414-4.414L3.293 3.293zM15.172 13.338A7 7 0 1010 5a1 1 0 102 0c0-3.866-3.134-7-7-7a7 7 0 100 14 7 7 0 005.172-2.338z" clipRule="evenodd" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-14-14zM10 3C5.522 3 1.732 5.943.458 10c.3.959.774 1.877 1.403 2.734l1.414-1.414A6 6 0 1110 9a1 1 0 00-2 0 4 4 0 11-4.414-4.414L3.293 3.293zM15.172 13.338A7 7 0 1010 5a1 1 0 102 0c0-3.866-3.134-7-7-7a7 7 0 100 14 7 7 0 005.172-2.338z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 )}
               </button>
