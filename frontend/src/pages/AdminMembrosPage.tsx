@@ -106,6 +106,15 @@ export const AdminMembrosPage: React.FC = () => {
     try {
       setSubmitting(true);
       const payload = { ...editData };
+
+      if (!payload.nome) delete payload.nome;
+      if (!payload.email) delete payload.email;
+      if (!payload.cpf) delete payload.cpf;
+      if (!payload.telefone) delete payload.telefone;
+      if (!payload.dataNascimento) delete payload.dataNascimento;
+      if (!payload.tipoMembro) delete payload.tipoMembro;
+      if (!payload.status) delete payload.status;
+
       if (!payload.senha) {
         delete payload.senha;
       }
@@ -128,6 +137,17 @@ export const AdminMembrosPage: React.FC = () => {
       loadMembers();
     } catch (error) {
       console.error("Erro ao salvar membro:", error);
+      const err = error as any;
+      const validationMessage = err?.response?.data?.details
+        ?.map((d: any) => `${d.path}: ${d.message}`)
+        ?.join("\n");
+      const message =
+        validationMessage ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Não foi possível salvar as alterações.";
+
+      alert(message);
     } finally {
       setSubmitting(false);
     }

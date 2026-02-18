@@ -37,7 +37,7 @@ export const updateUserSchema = z.object({
   nome: z.string().min(3).optional(),
   tipoMembro: z.enum(["INICIANTE", "FORMANDO", "PROFESSO"]).optional(),
   status: z.enum(["PENDENTE", "ATIVO", "INATIVO"]).optional(),
-  fotoBase64: z.string().optional(),
+  fotoBase64: z.string().nullable().optional(),
   telefone: z.string().min(10).optional(),
   endereco: z.object({
     rua: z.string().min(3).optional(),
@@ -67,7 +67,7 @@ export const adminUpdateUserSchema = z.object({
   senha: z.string().min(8, "Senha deve ter no mínimo 8 caracteres").optional(),
   tipoMembro: z.enum(["INICIANTE", "FORMANDO", "PROFESSO"]).optional(),
   status: z.enum(["PENDENTE", "ATIVO", "INATIVO"]).optional(),
-  fotoBase64: z.string().optional(),
+  fotoBase64: z.string().nullable().optional(),
   endereco: z.object({
     rua: z.string().min(3).optional(),
     numero: z.string().optional(),
