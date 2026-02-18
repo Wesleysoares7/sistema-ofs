@@ -1,0 +1,9 @@
+[allowlist]
+description = "Permite apenas chaves públicas de configuração do SonarCloud"
+regexes = [
+  '''^sonar\.projectKey=.*$''',
+  '''^sonar\.organization=.*$'''
+]
+paths = [
+  '''sonar-project\.properties'''
+]
