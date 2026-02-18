@@ -35,7 +35,9 @@ export const AdminContribuicoesPage: React.FC = () => {
   const [editingContribution, setEditingContribution] = useState<any>(null);
   const [editData, setEditData] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
-  const [monthlyContributions, setMonthlyContributions] = useState<MonthlyContribution[]>([]);
+  const [monthlyContributions, setMonthlyContributions] = useState<
+    MonthlyContribution[]
+  >([]);
   const anoReferenciaAnual = ano - 1;
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export const AdminContribuicoesPage: React.FC = () => {
   const handleEditAnnual = async (row: ContributionReport) => {
     try {
       setLoading(true);
-      
+
       // Se não tem anualId, cria as contribuições anuais faltantes para o ano selecionado
       if (!row.anualId) {
         console.log("Criando contribuições anuais faltantes para:", row.userId);
@@ -67,8 +69,11 @@ export const AdminContribuicoesPage: React.FC = () => {
         // Recarrega o relatório para pegar os novos IDs
         await loadRelatorio();
       }
-      
-      setEditingContribution({ type: "anual", row: { ...row, anualId: row.anualId || "created" } });
+
+      setEditingContribution({
+        type: "anual",
+        row: { ...row, anualId: row.anualId || "created" },
+      });
       setEditData({ status: row.anual });
       setIsModalOpen(true);
     } catch (error: any) {
@@ -76,7 +81,9 @@ export const AdminContribuicoesPage: React.FC = () => {
       const message =
         error?.response?.data?.error ||
         error?.response?.data?.message ||
-        (typeof error?.response?.data === "string" ? error.response.data : null) ||
+        (typeof error?.response?.data === "string"
+          ? error.response.data
+          : null) ||
         "Erro ao preparar contribuição anual. Tente novamente.";
       alert(message);
     } finally {
@@ -87,16 +94,16 @@ export const AdminContribuicoesPage: React.FC = () => {
   const handleEditMonthly = async (row: ContributionReport) => {
     try {
       setLoading(true);
-      
+
       // Primeiro, cria as contribuições mensais faltantes para o ano selecionado
       console.log("Criando contribuições mensais faltantes para:", row.userId);
       await api.post(`/contribuicoes/mensal/${row.userId}/missing?ano=${ano}`);
-      
+
       // Depois carrega as contribuições mensais
       const response = await api.get<MonthlyContribution[]>(
         `/contribuicoes/mensal/${row.userId}?ano=${ano}`,
       );
-      
+
       console.log("Contribuições mensais carregadas:", response.data);
       setMonthlyContributions(response.data);
       setEditingContribution({ type: "mensal", row });
@@ -112,21 +119,25 @@ export const AdminContribuicoesPage: React.FC = () => {
   const handleSaveContribution = async () => {
     try {
       setSubmitting(true);
-      
+
       if (editingContribution.type === "anual") {
         const row = editingContribution.row;
-        
+
         // Recarrega o relatório para pegar o anualId mais recente
         const reportResponse = await api.get<ContributionReport[]>(
           `/contribuicoes/dashboard/admin/report?ano=${ano}`,
         );
-        
-        const updatedRow = reportResponse.data.find(r => r.userId === row.userId);
+
+        const updatedRow = reportResponse.data.find(
+          (r) => r.userId === row.userId,
+        );
         if (!updatedRow?.anualId) {
-          alert("Erro: Não foi possível criar a contribuição anual. Tente novamente.");
+          alert(
+            "Erro: Não foi possível criar a contribuição anual. Tente novamente.",
+          );
           return;
         }
-        
+
         await api.put(`/contribuicoes/anual/${updatedRow.anualId}`, {
           status: editData.status,
           dataPagamento: editData.status === "PAGO" ? new Date() : null,
@@ -143,7 +154,7 @@ export const AdminContribuicoesPage: React.FC = () => {
           }
         }
       }
-      
+
       setIsModalOpen(false);
       loadRelatorio();
     } catch (error) {
@@ -172,9 +183,7 @@ export const AdminContribuicoesPage: React.FC = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Contribuições
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-800">Contribuições</h1>
           <p className="text-gray-600 mt-2">
             Relatório de pagamentos dos membros
           </p>
@@ -318,11 +327,14 @@ export const AdminContribuicoesPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status da Contribuição Anual (Exercício REFRAN {anoReferenciaAnual})
+                Status da Contribuição Anual (Exercício REFRAN{" "}
+                {anoReferenciaAnual})
               </label>
               <select
                 value={editData.status || ""}
-                onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                onChange={(e) =>
+                  setEditData({ ...editData, status: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
               >
                 <option value="">Selecione um status...</option>
@@ -336,12 +348,15 @@ export const AdminContribuicoesPage: React.FC = () => {
             {monthlyContributions.length === 0 ? (
               <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm text-yellow-800 text-center">
                 <p>⚠️ Nenhuma contribuição mensal encontrada para {ano}</p>
-                <p className="text-xs mt-1">As contribuições serão criadas quando você salvar.</p>
+                <p className="text-xs mt-1">
+                  As contribuições serão criadas quando você salvar.
+                </p>
               </div>
             ) : (
               <>
                 <p className="text-sm text-gray-600">
-                  📅 Clique no mês para alternar entre <strong>Pago</strong> (verde) e <strong>Pendente</strong> (vermelho)
+                  📅 Clique no mês para alternar entre <strong>Pago</strong>{" "}
+                  (verde) e <strong>Pendente</strong> (vermelho)
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {monthlyContributions.map((contrib) => (
@@ -363,9 +378,22 @@ export const AdminContribuicoesPage: React.FC = () => {
                           : "bg-red-200 text-red-800 hover:bg-red-300"
                       }`}
                     >
-                      {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"][
-                        contrib.mes - 1
-                      ]}
+                      {
+                        [
+                          "Jan",
+                          "Fev",
+                          "Mar",
+                          "Abr",
+                          "Mai",
+                          "Jun",
+                          "Jul",
+                          "Ago",
+                          "Set",
+                          "Out",
+                          "Nov",
+                          "Dez",
+                        ][contrib.mes - 1]
+                      }
                     </button>
                   ))}
                 </div>
