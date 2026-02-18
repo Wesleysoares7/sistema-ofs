@@ -243,7 +243,10 @@ export const AdminContribuicoesPage: React.FC = () => {
     const termo = busca.trim();
     if (!termo) return true;
 
-    return includesNormalized(row.nome, termo) || includesNormalized(row.email, termo);
+    return (
+      includesNormalized(row.nome, termo) ||
+      includesNormalized(row.email, termo)
+    );
   });
 
   const inadimplentes = relatorioFiltrado.filter(
