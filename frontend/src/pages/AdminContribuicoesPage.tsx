@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { AdminLayout } from "../components/Layout.js";
-import { Card, Button, Badge } from "../components/Common.js";
+import { Card, Badge } from "../components/Common.js";
 import { Modal } from "../components/Modal.js";
 import { api } from "../services/api.js";
+import { includesNormalized } from "../utils/textSearch.js";
 
 interface ContributionReport {
   userId: string;
@@ -54,12 +55,6 @@ export const AdminContribuicoesPage: React.FC = () => {
   const toISODateFromInput = (dateInput: string) => {
     return `${dateInput}T12:00:00.000Z`;
   };
-
-  const normalizeText = (value: string) =>
-    value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
 
   useEffect(() => {
     loadRelatorio();
@@ -245,13 +240,10 @@ export const AdminContribuicoesPage: React.FC = () => {
   }
 
   const relatorioFiltrado = relatorio.filter((row) => {
-    const termo = normalizeText(busca.trim());
+    const termo = busca.trim();
     if (!termo) return true;
 
-    return (
-      normalizeText(row.nome).includes(termo) ||
-      normalizeText(row.email).includes(termo)
-    );
+    return includesNormalized(row.nome, termo) || includesNormalized(row.email, termo);
   });
 
   const inadimplentes = relatorioFiltrado.filter(
