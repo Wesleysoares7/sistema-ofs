@@ -7,7 +7,13 @@ export const Button: React.FC<
     variant?: "primary" | "secondary" | "danger";
     loading?: boolean;
   }
-> = ({ variant = "primary", loading = false, className = "", children, ...props }) => {
+> = ({
+  variant = "primary",
+  loading = false,
+  className = "",
+  children,
+  ...props
+}) => {
   const variants = {
     primary: "bg-primary-600 hover:bg-primary-700 text-white",
     secondary: "bg-gray-300 hover:bg-gray-400 text-gray-800",
@@ -25,10 +31,10 @@ export const Button: React.FC<
   );
 };
 
-export const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
-  children,
-  className = "",
-}) => (
+export const Card: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+}> = ({ children, className = "" }) => (
   <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
     {children}
   </div>
@@ -69,7 +75,11 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({
   const navigate = useNavigate();
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Carregando...
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
