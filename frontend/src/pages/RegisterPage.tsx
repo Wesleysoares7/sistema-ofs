@@ -84,11 +84,6 @@ export const RegisterPage: React.FC = () => {
         formData.dataNascimento + "T00:00:00",
       ).toISOString();
 
-      // Validar tamanho da foto se existir
-      if (fotoBase64 && fotoBase64.length > 500000) {
-        throw new Error("Foto muito grande! Máximo 5MB");
-      }
-
       const payload = {
         nome: formData.nome,
         cpf: cpfLimpo,
@@ -375,7 +370,8 @@ export const RegisterPage: React.FC = () => {
                   </button>
                 )}
                 <p className="text-xs text-gray-500">
-                  Máximo 5MB. Formatos: JPEG, PNG, GIF, WebP
+                  Formatos: JPEG, PNG, GIF, WebP. Acima de 5MB a imagem é
+                  reduzida automaticamente.
                 </p>
               </div>
             </div>

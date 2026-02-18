@@ -6,7 +6,11 @@ import { User, Endereco } from "../types/index.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useToast } from "../components/Toast.js";
 import { Toast } from "../components/Toast.js";
-import { imageToBase64, isValidImageFile, getImageUrl } from "../utils/imageHelper.js";
+import {
+  imageToBase64,
+  isValidImageFile,
+  getImageUrl,
+} from "../utils/imageHelper.js";
 
 export const MemberProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -78,16 +82,16 @@ export const MemberProfilePage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!isValidImageFile(file)) {
-      showToast("Arquivo inválido! Use JPEG, PNG, GIF ou WebP com até 5MB.", "error");
-      return;
-    }
-
     try {
+      isValidImageFile(file);
       const base64 = await imageToBase64(file);
       setFormData({ ...formData, fotoBase64: base64 });
-    } catch (error) {
-      showToast("Erro ao processar imagem", "error");
+    } catch (error: any) {
+      showToast(
+        error?.message ||
+          "Erro ao processar imagem. Tente outro arquivo de imagem.",
+        "error",
+      );
     }
   };
 
@@ -246,7 +250,10 @@ export const MemberProfilePage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Status
                   </label>
-                  <Badge status={profile.status} className="w-full text-center" />
+                  <Badge
+                    status={profile.status}
+                    className="w-full text-center"
+                  />
                 </div>
 
                 <div>
@@ -265,9 +272,7 @@ export const MemberProfilePage: React.FC = () => {
 
             {/* Endereço */}
             <Card>
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
-                Endereço
-              </h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Endereço</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>

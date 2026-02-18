@@ -92,14 +92,8 @@ export const AdminConfigPage: React.FC = () => {
 
     if (!file) return;
 
-    if (!isValidImageFile(file)) {
-      setErrorMessage(
-        "Arquivo inválido. Use PNG, JPG, GIF ou WebP com até 5MB",
-      );
-      return;
-    }
-
     try {
+      isValidImageFile(file);
       const base64 = await imageToBase64(file);
       setFormData({
         ...formData,
@@ -107,9 +101,11 @@ export const AdminConfigPage: React.FC = () => {
       });
       setQrcodePreview(base64 as string);
       setErrorMessage("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao processar imagem:", error);
-      setErrorMessage("Erro ao processar QR code");
+      setErrorMessage(
+        error?.message || "Erro ao processar QR code. Tente outra imagem.",
+      );
     }
   };
 
@@ -118,14 +114,8 @@ export const AdminConfigPage: React.FC = () => {
 
     if (!file) return;
 
-    if (!isValidImageFile(file)) {
-      setErrorMessage(
-        "Arquivo inválido. Use PNG, JPG, GIF ou WebP com até 5MB",
-      );
-      return;
-    }
-
     try {
+      isValidImageFile(file);
       const base64 = await imageToBase64(file);
       setFormData({
         ...formData,
@@ -133,9 +123,11 @@ export const AdminConfigPage: React.FC = () => {
       });
       setLogoPreview(base64 as string);
       setErrorMessage("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao processar logo:", error);
-      setErrorMessage("Erro ao processar logo");
+      setErrorMessage(
+        error?.message || "Erro ao processar logo. Tente outra imagem.",
+      );
     }
   };
 
@@ -302,7 +294,8 @@ export const AdminConfigPage: React.FC = () => {
                     />
                   </label>
                   <p className="text-sm text-gray-500 mt-2">
-                    Formatos aceitos: PNG, JPG, GIF, WebP (máx 5MB)
+                    Formatos aceitos: PNG, JPG, GIF, WebP. Acima de 5MB, o
+                    sistema reduz automaticamente.
                   </p>
                 </div>
               </div>
@@ -473,7 +466,8 @@ export const AdminConfigPage: React.FC = () => {
                     />
                   </label>
                   <p className="text-sm text-gray-500 mt-2">
-                    Formatos aceitos: PNG, JPG, GIF, WebP (máx 5MB)
+                    Formatos aceitos: PNG, JPG, GIF, WebP. Acima de 5MB, o
+                    sistema reduz automaticamente.
                   </p>
                 </div>
               </div>
