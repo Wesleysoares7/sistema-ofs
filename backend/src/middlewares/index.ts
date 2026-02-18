@@ -29,11 +29,7 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-export function logRequests(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+export function logRequests(req: Request, res: Response, next: NextFunction) {
   const start = Date.now();
 
   res.on("finish", () => {
