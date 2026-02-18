@@ -113,8 +113,14 @@ export const RegisterPage: React.FC = () => {
 
       await register(payload);
 
-      showToast("Cadastro realizado! Aguarde aprovação.", "success");
-      navigate("/login");
+      navigate("/login", {
+        state: {
+          toast: {
+            message: "Cadastro realizado com sucesso! Aguarde aprovação.",
+            type: "success",
+          },
+        },
+      });
     } catch (error: any) {
       console.error("Erro ao cadastrar:", error);
       showToast(error.message || "Erro ao cadastrar", "error");
