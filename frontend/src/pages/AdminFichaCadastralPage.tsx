@@ -78,7 +78,10 @@ export const AdminFichaCadastralPage: React.FC = () => {
     const termo = busca.trim();
     if (!termo) return true;
 
-    return includesNormalized(member.nome, termo) || includesNormalized(member.email, termo);
+    return (
+      includesNormalized(member.nome, termo) ||
+      includesNormalized(member.email, termo)
+    );
   });
 
   const tituloSistema = `Ordem Franciscana Secular${branding?.nomeFraternidade ? ` - ${branding.nomeFraternidade}` : ""}`;
@@ -128,15 +131,15 @@ export const AdminFichaCadastralPage: React.FC = () => {
         </div>
       ) : (
         filteredMembers.map((member, index) => (
-        <div
-          key={member.id}
-          className={`print-page mx-auto my-6 bg-white shadow-sm border border-gray-200 ${
-            index > 0 ? "page-break" : ""
-          }`}
-          style={{ width: "210mm", minHeight: "297mm", padding: "16mm 14mm" }}
-        >
-          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-            <div className="flex items-center gap-3">
+          <div
+            key={member.id}
+            className={`print-page mx-auto my-6 bg-white shadow-sm border border-gray-200 ${
+              index > 0 ? "page-break" : ""
+            }`}
+            style={{ width: "210mm", minHeight: "297mm", padding: "16mm 14mm" }}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+              <div className="flex items-center gap-3">
                 {branding?.logoBase64 ? (
                   <img
                     src={branding.logoBase64}
@@ -148,111 +151,133 @@ export const AdminFichaCadastralPage: React.FC = () => {
                     🕊️
                   </div>
                 )}
-              <div>
+                <div>
                   <h1 className="text-lg font-bold">{tituloSistema}</h1>
-                <p className="text-sm text-gray-600">Ficha Cadastral do Membro</p>
+                  <p className="text-sm text-gray-600">
+                    Ficha Cadastral do Membro
+                  </p>
+                </div>
+              </div>
+              <div className="text-right text-sm text-gray-600">
+                <p>Data: {new Date().toLocaleDateString("pt-BR")}</p>
+                <p>ID: {member.id}</p>
               </div>
             </div>
-            <div className="text-right text-sm text-gray-600">
-              <p>Data: {new Date().toLocaleDateString("pt-BR")}</p>
-              <p>ID: {member.id}</p>
+
+            <div className="mt-6 grid grid-cols-[120px_1fr] gap-6">
+              <div>
+                <div className="w-28 h-36 border border-gray-300 rounded overflow-hidden bg-gray-50">
+                  {member.fotoBase64 ? (
+                    <img
+                      src={member.fotoBase64}
+                      alt={`Foto de ${member.nome}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                      Sem foto
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-700">
+                    Informacoes Pessoais
+                  </h2>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Nome</p>
+                      <p className="font-medium">{member.nome}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">CPF</p>
+                      <p className="font-medium">{member.cpf}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Data de Nascimento</p>
+                      <p className="font-medium">
+                        {member.dataNascimento
+                          ? new Date(member.dataNascimento).toLocaleDateString(
+                              "pt-BR",
+                            )
+                          : "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Tipo de Membro</p>
+                      <p className="font-medium">{member.tipoMembro || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Status</p>
+                      <p className="font-medium">{member.status}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-700">
+                    Contato
+                  </h2>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Email</p>
+                      <p className="font-medium">{member.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Telefone</p>
+                      <p className="font-medium">{member.telefone}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-700">
+                    Endereco
+                  </h2>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Rua</p>
+                      <p className="font-medium">
+                        {member.endereco?.rua || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Numero</p>
+                      <p className="font-medium">
+                        {member.endereco?.numero || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Bairro</p>
+                      <p className="font-medium">
+                        {member.endereco?.bairro || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Cidade</p>
+                      <p className="font-medium">
+                        {member.endereco?.cidade || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Estado</p>
+                      <p className="font-medium">
+                        {member.endereco?.estado || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">CEP</p>
+                      <p className="font-medium">
+                        {member.endereco?.cep || "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div className="mt-6 grid grid-cols-[120px_1fr] gap-6">
-            <div>
-              <div className="w-28 h-36 border border-gray-300 rounded overflow-hidden bg-gray-50">
-                {member.fotoBase64 ? (
-                  <img
-                    src={member.fotoBase64}
-                    alt={`Foto de ${member.nome}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                    Sem foto
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <h2 className="text-sm font-semibold text-gray-700">Informacoes Pessoais</h2>
-                <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-gray-500">Nome</p>
-                    <p className="font-medium">{member.nome}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">CPF</p>
-                    <p className="font-medium">{member.cpf}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Data de Nascimento</p>
-                    <p className="font-medium">
-                      {member.dataNascimento
-                        ? new Date(member.dataNascimento).toLocaleDateString("pt-BR")
-                        : "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Tipo de Membro</p>
-                    <p className="font-medium">{member.tipoMembro || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Status</p>
-                    <p className="font-medium">{member.status}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-sm font-semibold text-gray-700">Contato</h2>
-                <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-gray-500">Email</p>
-                    <p className="font-medium">{member.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Telefone</p>
-                    <p className="font-medium">{member.telefone}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-sm font-semibold text-gray-700">Endereco</h2>
-                <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-gray-500">Rua</p>
-                    <p className="font-medium">{member.endereco?.rua || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Numero</p>
-                    <p className="font-medium">{member.endereco?.numero || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Bairro</p>
-                    <p className="font-medium">{member.endereco?.bairro || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Cidade</p>
-                    <p className="font-medium">{member.endereco?.cidade || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Estado</p>
-                    <p className="font-medium">{member.endereco?.estado || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">CEP</p>
-                    <p className="font-medium">{member.endereco?.cep || "-"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
         ))
       )}
     </div>
