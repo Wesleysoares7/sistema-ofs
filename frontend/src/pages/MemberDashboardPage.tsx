@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { MemberLayout } from "../components/Layout.js";
-import { Card, Button, Badge } from "../components/Common.js";
+import { Card, Badge } from "../components/Common.js";
 import { api } from "../services/api.js";
-import { MemberDashboard, ContribuicaoMensal } from "../types/index.js";
+import { MemberDashboard } from "../types/index.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { formatarValorComExtenso } from "../utils/formatCurrency.js";
 

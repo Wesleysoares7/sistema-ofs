@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../components/Layout.js";
-import { Card, Button, Badge } from "../components/Common.js";
+import { Card, Button } from "../components/Common.js";
 import { Modal } from "../components/Modal.js";
 import { api } from "../services/api.js";
 import { DashboardStats } from "../types/index.js";
@@ -38,7 +38,9 @@ export const AdminDashboardPage: React.FC = () => {
     try {
       setLoadingMembers(true);
       const response = await api.get<User[]>("/users");
-      const onlyMembers = response.data.filter((user) => user.role === "MEMBER");
+      const onlyMembers = response.data.filter(
+        (user) => user.role === "MEMBER",
+      );
       setMembers(onlyMembers);
     } catch (error) {
       console.error("Erro ao carregar membros:", error);
@@ -75,9 +77,7 @@ export const AdminDashboardPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-800">
             Dashboard Administrativo
           </h1>
-          <p className="text-gray-600 mt-2">
-            Resumo geral do sistema OFS
-          </p>
+          <p className="text-gray-600 mt-2">Resumo geral do sistema OFS</p>
         </div>
 
         {stats && (
@@ -150,14 +150,12 @@ export const AdminDashboardPage: React.FC = () => {
       >
         <div className="space-y-4">
           <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 text-sm text-gray-700">
-            Escolha entre gerar a ficha de todos os membros ou de apenas um membro especifico.
+            Escolha entre gerar a ficha de todos os membros ou de apenas um
+            membro especifico.
           </div>
 
           <div className="flex flex-col gap-3">
-            <Button
-              variant="primary"
-              onClick={() => openFichaPreview("all")}
-            >
+            <Button variant="primary" onClick={() => openFichaPreview("all")}>
               Gerar ficha de todos os membros
             </Button>
 

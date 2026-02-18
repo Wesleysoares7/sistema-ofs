@@ -5,6 +5,7 @@ export interface User {
   email: string;
   telefone: string;
   dataNascimento: string;
+  fotoBase64?: string | null;
   role: "ADMIN" | "MEMBER";
   status: "PENDENTE" | "ATIVO" | "INATIVO";
   tipoMembro?: "INICIANTE" | "FORMANDO" | "PROFESSO" | null;

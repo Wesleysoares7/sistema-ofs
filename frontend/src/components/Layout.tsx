@@ -137,10 +137,7 @@ export const Sidebar: React.FC<{
           isOpen ? "block" : "hidden"
         }`}
       >
-        <div
-          className="absolute inset-0 bg-black/40"
-          onClick={onClose}
-        />
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
         <aside className="absolute left-0 top-0 h-full w-72 bg-primary-900 text-white shadow-xl">
           <div className="flex items-center justify-between p-4 border-b border-primary-800">
             <span className="font-semibold">Menu</span>
@@ -178,7 +175,6 @@ export const Sidebar: React.FC<{
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   const menuItems = [

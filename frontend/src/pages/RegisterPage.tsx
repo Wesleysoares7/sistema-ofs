@@ -3,11 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
 import { Button, Card } from "../components/Common.js";
 import { Toast, useToast } from "../components/Toast.js";
-import {
-  imageToBase64,
-  isValidImageFile,
-  getImageUrl,
-} from "../utils/imageHelper.js";
+import { imageToBase64, isValidImageFile } from "../utils/imageHelper.js";
 
 export const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
