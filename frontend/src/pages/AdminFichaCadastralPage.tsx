@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../services/api.js";
 import { User } from "../types/index.js";
+import { includesNormalized } from "../utils/textSearch.js";
 
 interface FichaUser extends User {
   fotoBase64?: string | null;
@@ -16,6 +17,7 @@ export const AdminFichaCadastralPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<FichaUser[]>([]);
+  const [busca, setBusca] = useState("");
   const [branding, setBranding] = useState<BrandingConfig | null>(null);
 
   const memberId = searchParams.get("id");
@@ -72,6 +74,13 @@ export const AdminFichaCadastralPage: React.FC = () => {
     );
   }
 
+  const filteredMembers = members.filter((member) => {
+    const termo = busca.trim();
+    if (!termo) return true;
+
+    return includesNormalized(member.nome, termo) || includesNormalized(member.email, termo);
+  });
+
   const tituloSistema = `Ordem Franciscana Secular${branding?.nomeFraternidade ? ` - ${branding.nomeFraternidade}` : ""}`;
 
   return (
@@ -98,7 +107,27 @@ export const AdminFichaCadastralPage: React.FC = () => {
         }
       `}</style>
 
-      {members.map((member, index) => (
+      {mode === "all" && (
+        <div className="no-print max-w-5xl mx-auto mt-4 px-4">
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome ou email"
+            className="w-full md:max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Exibindo {filteredMembers.length} de {members.length} fichas
+          </p>
+        </div>
+      )}
+
+      {filteredMembers.length === 0 ? (
+        <div className="p-6 text-center text-gray-600">
+          Nenhum membro encontrado para essa busca.
+        </div>
+      ) : (
+        filteredMembers.map((member, index) => (
         <div
           key={member.id}
           className={`print-page mx-auto my-6 bg-white shadow-sm border border-gray-200 ${
@@ -224,7 +253,8 @@ export const AdminFichaCadastralPage: React.FC = () => {
             </div>
           </div>
         </div>
-      ))}
+        ))
+      )}
     </div>
   );
 };
