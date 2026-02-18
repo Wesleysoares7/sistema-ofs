@@ -4,7 +4,11 @@ import { Card, Button, Badge } from "../components/Common.js";
 import { Modal } from "../components/Modal.js";
 import { api } from "../services/api.js";
 import { User } from "../types/index.js";
-import { imageToBase64, isValidImageFile, getImageUrl } from "../utils/imageHelper.js";
+import {
+  imageToBase64,
+  isValidImageFile,
+  getImageUrl,
+} from "../utils/imageHelper.js";
 import { includesNormalized } from "../utils/textSearch.js";
 
 export const AdminMembrosPage: React.FC = () => {
@@ -154,7 +158,10 @@ export const AdminMembrosPage: React.FC = () => {
     const termo = busca.trim();
     if (!termo) return true;
 
-    return includesNormalized(user.nome, termo) || includesNormalized(user.email, termo);
+    return (
+      includesNormalized(user.nome, termo) ||
+      includesNormalized(user.email, termo)
+    );
   });
 
   if (loading) {
@@ -401,7 +408,9 @@ export const AdminMembrosPage: React.FC = () => {
             <input
               type="text"
               value={editData.nome || ""}
-              onChange={(e) => setEditData({ ...editData, nome: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, nome: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             />
           </div>
@@ -413,7 +422,9 @@ export const AdminMembrosPage: React.FC = () => {
             <input
               type="email"
               value={editData.email || ""}
-              onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, email: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             />
           </div>
@@ -425,7 +436,9 @@ export const AdminMembrosPage: React.FC = () => {
             <input
               type="text"
               value={editData.cpf || ""}
-              onChange={(e) => setEditData({ ...editData, cpf: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, cpf: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             />
           </div>
@@ -437,7 +450,9 @@ export const AdminMembrosPage: React.FC = () => {
             <input
               type="text"
               value={editData.telefone || ""}
-              onChange={(e) => setEditData({ ...editData, telefone: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, telefone: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             />
           </div>
@@ -449,7 +464,9 @@ export const AdminMembrosPage: React.FC = () => {
             <input
               type="date"
               value={editData.dataNascimento || ""}
-              onChange={(e) => setEditData({ ...editData, dataNascimento: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, dataNascimento: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             />
           </div>
@@ -461,7 +478,9 @@ export const AdminMembrosPage: React.FC = () => {
             <input
               type="password"
               value={editData.senha || ""}
-              onChange={(e) => setEditData({ ...editData, senha: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, senha: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
               placeholder="Deixe em branco para nao alterar"
             />
@@ -477,10 +496,12 @@ export const AdminMembrosPage: React.FC = () => {
                 <input
                   type="text"
                   value={editData.endereco?.rua || ""}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    endereco: { ...editData.endereco, rua: e.target.value },
-                  })}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      endereco: { ...editData.endereco, rua: e.target.value },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
                 />
               </div>
@@ -491,10 +512,15 @@ export const AdminMembrosPage: React.FC = () => {
                 <input
                   type="text"
                   value={editData.endereco?.numero || ""}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    endereco: { ...editData.endereco, numero: e.target.value },
-                  })}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      endereco: {
+                        ...editData.endereco,
+                        numero: e.target.value,
+                      },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
                 />
               </div>
@@ -505,10 +531,15 @@ export const AdminMembrosPage: React.FC = () => {
                 <input
                   type="text"
                   value={editData.endereco?.bairro || ""}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    endereco: { ...editData.endereco, bairro: e.target.value },
-                  })}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      endereco: {
+                        ...editData.endereco,
+                        bairro: e.target.value,
+                      },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
                 />
               </div>
@@ -519,10 +550,15 @@ export const AdminMembrosPage: React.FC = () => {
                 <input
                   type="text"
                   value={editData.endereco?.cidade || ""}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    endereco: { ...editData.endereco, cidade: e.target.value },
-                  })}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      endereco: {
+                        ...editData.endereco,
+                        cidade: e.target.value,
+                      },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
                 />
               </div>
@@ -533,10 +569,15 @@ export const AdminMembrosPage: React.FC = () => {
                 <input
                   type="text"
                   value={editData.endereco?.estado || ""}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    endereco: { ...editData.endereco, estado: e.target.value.toUpperCase() },
-                  })}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      endereco: {
+                        ...editData.endereco,
+                        estado: e.target.value.toUpperCase(),
+                      },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
                   maxLength={2}
                 />
@@ -548,10 +589,12 @@ export const AdminMembrosPage: React.FC = () => {
                 <input
                   type="text"
                   value={editData.endereco?.cep || ""}
-                  onChange={(e) => setEditData({
-                    ...editData,
-                    endereco: { ...editData.endereco, cep: e.target.value },
-                  })}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      endereco: { ...editData.endereco, cep: e.target.value },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
                 />
               </div>
@@ -564,7 +607,9 @@ export const AdminMembrosPage: React.FC = () => {
             </label>
             <select
               value={editData.tipoMembro || ""}
-              onChange={(e) => setEditData({ ...editData, tipoMembro: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, tipoMembro: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             >
               <option value="">Selecione...</option>
@@ -580,7 +625,9 @@ export const AdminMembrosPage: React.FC = () => {
             </label>
             <select
               value={editData.status || ""}
-              onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, status: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             >
               <option value="ATIVO">Ativo</option>
