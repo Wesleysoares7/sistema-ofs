@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
 import { Button, Card } from "../components/Common.js";
 import { Toast, useToast } from "../components/Toast.js";
@@ -16,6 +16,7 @@ export const LoginPage: React.FC = () => {
   } | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast, showToast, setToast } = useToast();
 
   React.useEffect(() => {
@@ -34,6 +35,22 @@ export const LoginPage: React.FC = () => {
 
     loadBranding();
   }, []);
+
+  React.useEffect(() => {
+    const routeState = location.state as
+      | {
+          toast?: {
+            message: string;
+            type: "success" | "error" | "info" | "warning";
+          };
+        }
+      | undefined;
+
+    if (routeState?.toast) {
+      showToast(routeState.toast.message, routeState.toast.type);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate, showToast]);
 
   const tituloSistema = `Ordem Franciscana Secular${branding?.nomeFraternidade ? ` - ${branding.nomeFraternidade}` : ""}`;
 
