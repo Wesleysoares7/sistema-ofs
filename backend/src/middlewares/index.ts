@@ -1,9 +1,22 @@
 import { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // limite de 100 requisições por IP
+  max: isProduction ? 100 : 1000, // em dev evita bloqueios por React StrictMode e múltiplas telas
+  skip: (req) => {
+    if (req.method === "OPTIONS") {
+      return true;
+    }
+
+    if (!isProduction) {
+      return req.path === "/health" || req.path.startsWith("/api/config");
+    }
+
+    return false;
+  },
   message: "Muitas requisições, tente novamente mais tarde",
   standardHeaders: true,
   legacyHeaders: false,
