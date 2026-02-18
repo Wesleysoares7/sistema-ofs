@@ -43,16 +43,21 @@ export class ContribuicaoRepository {
   }
 
   static async createMultipleContribuicaoAnual(userId: string, anos: number[]) {
-    const creates = anos.map((ano) => ({
-      userId,
-      ano,
-      status: "PENDENTE" as const,
-    }));
-
-    return prisma.contribuicaoAnual.createMany({
-      data: creates,
-      skipDuplicates: true,
-    });
+    return prisma.$transaction(
+      anos.map((ano) =>
+        prisma.contribuicaoAnual.upsert({
+          where: {
+            userId_ano: { userId, ano },
+          },
+          update: {},
+          create: {
+            userId,
+            ano,
+            status: "PENDENTE",
+          },
+        }),
+      ),
+    );
   }
 
   // Contribuição Mensal
@@ -107,20 +112,25 @@ export class ContribuicaoRepository {
   }
 
   static async createAnoContribuicoesMensais(userId: string, ano: number) {
-    const creates = [];
+    const upserts = [];
     for (let mes = 1; mes <= 12; mes++) {
-      creates.push({
-        userId,
-        mes,
-        ano,
-        status: "PENDENTE" as const,
-      });
+      upserts.push(
+        prisma.contribuicaoMensal.upsert({
+          where: {
+            userId_mes_ano: { userId, mes, ano },
+          },
+          update: {},
+          create: {
+            userId,
+            mes,
+            ano,
+            status: "PENDENTE",
+          },
+        }),
+      );
     }
 
-    return prisma.contribuicaoMensal.createMany({
-      data: creates,
-      skipDuplicates: true,
-    });
+    return prisma.$transaction(upserts);
   }
 
   static async countPendentes(userId: string, ano: number) {
