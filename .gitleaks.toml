@@ -1,13 +1,8 @@
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = "Permite apenas metadados públicos do SonarCloud no arquivo de configuração"
+[allowlist]
+description = "Permite metadados públicos do SonarCloud no arquivo de configuração"
 paths = [
   '''sonar-project\.properties'''
-]
-regexTarget = "line"
-regexes = [
-  '''^sonar\.projectKey=.*$''',
-  '''^sonar\.organization=.*$'''
 ]
