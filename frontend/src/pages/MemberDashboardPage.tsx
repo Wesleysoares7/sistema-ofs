@@ -21,7 +21,9 @@ export const MemberDashboardPage: React.FC = () => {
   const [dashboard, setDashboard] = useState<MemberDashboard | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
-  const [anoSelecionado, setAnoSelecionado] = useState(new Date().getFullYear());
+  const [anoSelecionado, setAnoSelecionado] = useState(
+    new Date().getFullYear(),
+  );
   const anoReferenciaAnual = anoSelecionado - 1;
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export const MemberDashboardPage: React.FC = () => {
         api.get<MemberDashboard>(
           `/contribuicoes/dashboard/member/${user.id}?ano=${anoSelecionado}`,
         ),
-        api.get<Config>("/config")
+        api.get<Config>("/config"),
       ]);
       setDashboard(dashboardResponse.data);
       setConfig(configResponse.data);
@@ -65,9 +67,7 @@ export const MemberDashboardPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-800">
             Olá, {user?.nome}!
           </h1>
-          <p className="text-gray-600 mt-2">
-            Dashboard de suas contribuições
-          </p>
+          <p className="text-gray-600 mt-2">Dashboard de suas contribuições</p>
         </div>
 
         {dashboard && (
@@ -79,12 +79,15 @@ export const MemberDashboardPage: React.FC = () => {
                 onChange={(e) => setAnoSelecionado(parseInt(e.target.value))}
                 className="px-3 py-2 border border-gray-300 rounded-lg"
               >
-                {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1]
-                  .map((ano) => (
-                    <option key={ano} value={ano}>
-                      {ano}
-                    </option>
-                  ))}
+                {[
+                  new Date().getFullYear() - 1,
+                  new Date().getFullYear(),
+                  new Date().getFullYear() + 1,
+                ].map((ano) => (
+                  <option key={ano} value={ano}>
+                    {ano}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -105,7 +108,9 @@ export const MemberDashboardPage: React.FC = () => {
               {/* Contribuição Anual */}
               <div className="mb-6 pb-6 border-b-2 border-orange-200">
                 <div className="bg-white p-6 rounded-lg border-2 border-orange-300 shadow-md">
-                  <p className="text-xl font-bold text-gray-700 mb-2">📅 Contribuição Anual</p>
+                  <p className="text-xl font-bold text-gray-700 mb-2">
+                    📅 Contribuição Anual
+                  </p>
                   <p className="text-3xl font-bold text-orange-600 mb-1">
                     {formatarValorComExtenso(config?.valorAnual || 0)}
                   </p>
@@ -117,7 +122,8 @@ export const MemberDashboardPage: React.FC = () => {
                     </div>
                   )}
                   <p className="text-sm text-gray-500 mt-2">
-                    Valor cobrado uma vez por ano (Exercício REFRAN {anoReferenciaAnual})
+                    Valor cobrado uma vez por ano (Exercício REFRAN{" "}
+                    {anoReferenciaAnual})
                   </p>
                 </div>
               </div>
@@ -125,7 +131,9 @@ export const MemberDashboardPage: React.FC = () => {
               {/* Contribuição Mensal */}
               <div className="mb-6 pb-6">
                 <div className="bg-white p-6 rounded-lg border-2 border-orange-300 shadow-md">
-                  <p className="text-xl font-bold text-gray-700 mb-2">📆 Contribuição Mensal</p>
+                  <p className="text-xl font-bold text-gray-700 mb-2">
+                    📆 Contribuição Mensal
+                  </p>
                   <p className="text-3xl font-bold text-orange-600 mb-1">
                     {formatarValorComExtenso(config?.valorMensal || 0)}
                   </p>
@@ -148,7 +156,7 @@ export const MemberDashboardPage: React.FC = () => {
                   <h3 className="font-semibold text-blue-900 mb-3 flex items-center">
                     <span className="mr-2">✅</span> Como Pagar via PIX
                   </h3>
-                  
+
                   <div className="space-y-3">
                     {config.qrcodePixBase64 && (
                       <div className="bg-white p-3 rounded-lg inline-block border border-blue-200">
@@ -176,8 +184,10 @@ export const MemberDashboardPage: React.FC = () => {
               ) : (
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-300 mt-4">
                   <p className="text-sm text-yellow-800">
-                    ⚠️ <strong>Dados de PIX não configurados:</strong> O administrador ainda não informou a chave PIX e QR Code. 
-                    Verifique com a administração para obter as informações de pagamento.
+                    ⚠️ <strong>Dados de PIX não configurados:</strong> O
+                    administrador ainda não informou a chave PIX e QR Code.
+                    Verifique com a administração para obter as informações de
+                    pagamento.
                   </p>
                 </div>
               )}
@@ -283,7 +293,9 @@ export const MemberDashboardPage: React.FC = () => {
                         </div>
                         {contrib.status === "PAGO" && contrib.dataPagamento && (
                           <div className="text-xs text-gray-700 mt-1">
-                            {new Date(contrib.dataPagamento).toLocaleDateString("pt-BR")}
+                            {new Date(contrib.dataPagamento).toLocaleDateString(
+                              "pt-BR",
+                            )}
                           </div>
                         )}
                       </div>
