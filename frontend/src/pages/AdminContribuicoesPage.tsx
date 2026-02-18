@@ -30,6 +30,7 @@ interface MonthlyContribution {
 
 export const AdminContribuicoesPage: React.FC = () => {
   const [relatorio, setRelatorio] = useState<ContributionReport[]>([]);
+  const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
   const [ano, setAno] = useState(new Date().getFullYear());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,6 +54,12 @@ export const AdminContribuicoesPage: React.FC = () => {
   const toISODateFromInput = (dateInput: string) => {
     return `${dateInput}T12:00:00.000Z`;
   };
+
+  const normalizeText = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
 
   useEffect(() => {
     loadRelatorio();
@@ -237,7 +244,17 @@ export const AdminContribuicoesPage: React.FC = () => {
     );
   }
 
-  const inadimplentes = relatorio.filter(
+  const relatorioFiltrado = relatorio.filter((row) => {
+    const termo = normalizeText(busca.trim());
+    if (!termo) return true;
+
+    return (
+      normalizeText(row.nome).includes(termo) ||
+      normalizeText(row.email).includes(termo)
+    );
+  });
+
+  const inadimplentes = relatorioFiltrado.filter(
     (r) => r.statusGeral === "INADIMPLENTE",
   ).length;
 
@@ -245,44 +262,62 @@ export const AdminContribuicoesPage: React.FC = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Contribuições</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+            Contribuições
+          </h1>
           <p className="text-gray-600 mt-2">
             Relatório de pagamentos dos membros
           </p>
         </div>
 
-        <div className="flex gap-4 items-center">
-          <label className="font-medium text-gray-700">Ano:</label>
-          <select
-            value={ano}
-            onChange={(e) => setAno(parseInt(e.target.value))}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            {[2023, 2024, 2025, 2026].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col lg:flex-row gap-2 sm:gap-4 lg:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
+            <label className="font-medium text-gray-700 text-sm sm:text-base">
+              Ano:
+            </label>
+            <select
+              value={ano}
+              onChange={(e) => setAno(parseInt(e.target.value))}
+              className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              {[2023, 2024, 2025, 2026].map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome ou email"
+            className="w-full lg:max-w-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+          />
         </div>
+
+        <p className="text-sm text-gray-500">
+          Exibindo {relatorioFiltrado.length} de {relatorio.length} membros
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="text-center">
-            <div className="text-4xl font-bold text-primary-600">
-              {relatorio.length}
+            <div className="text-3xl sm:text-4xl font-bold text-primary-600">
+              {relatorioFiltrado.length}
             </div>
             <p className="text-gray-600 text-sm mt-2">Total de Membros</p>
           </Card>
 
           <Card className="text-center">
-            <div className="text-4xl font-bold text-green-600">
-              {relatorio.length - inadimplentes}
+            <div className="text-3xl sm:text-4xl font-bold text-green-600">
+              {relatorioFiltrado.length - inadimplentes}
             </div>
             <p className="text-gray-600 text-sm mt-2">Em Dia</p>
           </Card>
 
           <Card className="text-center">
-            <div className="text-4xl font-bold text-red-600">
+            <div className="text-3xl sm:text-4xl font-bold text-red-600">
               {inadimplentes}
             </div>
             <p className="text-gray-600 text-sm mt-2">Inadimplentes</p>
@@ -290,7 +325,72 @@ export const AdminContribuicoesPage: React.FC = () => {
         </div>
 
         <Card>
-          <div className="overflow-x-auto">
+          <div className="space-y-4 md:hidden">
+            {relatorioFiltrado.map((row) => (
+              <div
+                key={row.userId}
+                className="border border-gray-200 rounded-lg p-4 space-y-3"
+              >
+                <div>
+                  <p className="font-semibold text-gray-800">{row.nome}</p>
+                  <p className="text-sm text-gray-600 break-all">{row.email}</p>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Tipo</span>
+                  <span className="text-gray-700 font-medium">
+                    {row.tipoMembro || "—"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-gray-500">Anual</span>
+                  <Badge status={row.anual} />
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Mensal</span>
+                  <span className="font-semibold text-gray-700">
+                    {row.mensal.pagas}/{row.mensal.total}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-gray-500">Status</span>
+                  <Badge
+                    status={row.statusGeral}
+                    className={
+                      row.statusGeral === "EM DIA"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    onClick={() => handleEditAnnual(row)}
+                    className="w-full py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
+                  >
+                    ✎ Anual
+                  </button>
+                  <button
+                    onClick={() => handleEditMonthly(row)}
+                    className="w-full py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
+                  >
+                    ✎ Mensal
+                  </button>
+                </div>
+              </div>
+            ))}
+            {relatorioFiltrado.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-2">
+                Nenhum membro encontrado para essa busca.
+              </p>
+            )}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -318,7 +418,7 @@ export const AdminContribuicoesPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {relatorio.map((row) => (
+                {relatorioFiltrado.map((row) => (
                   <tr key={row.userId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-800">
                       {row.nome}
@@ -363,6 +463,16 @@ export const AdminContribuicoesPage: React.FC = () => {
                     </td>
                   </tr>
                 ))}
+                {relatorioFiltrado.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-6 text-center text-sm text-gray-500"
+                    >
+                      Nenhum membro encontrado para essa busca.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -435,7 +545,7 @@ export const AdminContribuicoesPage: React.FC = () => {
                   📅 Clique no mês para alternar entre <strong>Pago</strong>{" "}
                   (verde) e <strong>Pendente</strong> (vermelho)
                 </p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {monthlyContributions.map((contrib) => (
                     <div key={contrib.id} className="space-y-2">
                       <button
