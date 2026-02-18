@@ -50,11 +50,11 @@ export const AdminConfigPage: React.FC = () => {
       console.log("📥 Carregando configurações...");
       const response = await api.get<any>("/config");
       console.log("✅ Response bruto:", response.data);
-      
+
       // Detecta se veio encapsulado em {success: true, data: {...}}
       const configData = response.data.data || response.data;
       console.log("✅ ConfigData extraído:", configData);
-      
+
       setConfig(configData);
       setFormData({
         nomeFraternidade: configData.nomeFraternidade || "",
@@ -77,7 +77,9 @@ export const AdminConfigPage: React.FC = () => {
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
-        (typeof error?.response?.data === "string" ? error.response.data : null) ||
+        (typeof error?.response?.data === "string"
+          ? error.response.data
+          : null) ||
         "Erro ao carregar configurações";
       setErrorMessage(message);
     } finally {
@@ -107,7 +109,9 @@ export const AdminConfigPage: React.FC = () => {
     if (!file) return;
 
     if (!isValidImageFile(file)) {
-      setErrorMessage("Arquivo inválido. Use PNG, JPG, GIF ou WebP com até 5MB");
+      setErrorMessage(
+        "Arquivo inválido. Use PNG, JPG, GIF ou WebP com até 5MB",
+      );
       return;
     }
 
@@ -131,7 +135,9 @@ export const AdminConfigPage: React.FC = () => {
     if (!file) return;
 
     if (!isValidImageFile(file)) {
-      setErrorMessage("Arquivo inválido. Use PNG, JPG, GIF ou WebP com até 5MB");
+      setErrorMessage(
+        "Arquivo inválido. Use PNG, JPG, GIF ou WebP com até 5MB",
+      );
       return;
     }
 
@@ -264,7 +270,8 @@ export const AdminConfigPage: React.FC = () => {
                     placeholder="Ex: Fraternidade São Francisco de Assis"
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Será exibido como: Ordem Franciscana Secular - Nome da Fraternidade
+                    Será exibido como: Ordem Franciscana Secular - Nome da
+                    Fraternidade
                   </p>
                 </div>
 
@@ -363,9 +370,10 @@ export const AdminConfigPage: React.FC = () => {
               {/* Descrições dos Valores */}
               <div className="mt-6 pt-6 border-t space-y-4">
                 <p className="text-sm text-gray-600 italic">
-                  ℹ️ Adicione descrições para explicar aos membros o que esses valores cobrem
+                  ℹ️ Adicione descrições para explicar aos membros o que esses
+                  valores cobrem
                 </p>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     📝 Descrição da Contribuição Anual
@@ -373,13 +381,19 @@ export const AdminConfigPage: React.FC = () => {
                   <textarea
                     name="descricaoAnual"
                     value={formData.descricaoAnual}
-                    onChange={(e) => setFormData({...formData, descricaoAnual: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        descricaoAnual: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     rows={2}
                     placeholder="Ex: Contribuição anual para manutenção das atividades e eventos da comunidade"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Exemplo: 'Contribuição anual para manutenção das atividades e eventos da comunidade'
+                    Exemplo: 'Contribuição anual para manutenção das atividades
+                    e eventos da comunidade'
                   </p>
                 </div>
 
@@ -390,13 +404,19 @@ export const AdminConfigPage: React.FC = () => {
                   <textarea
                     name="descricaoMensal"
                     value={formData.descricaoMensal}
-                    onChange={(e) => setFormData({...formData, descricaoMensal: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        descricaoMensal: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     rows={2}
                     placeholder="Ex: Contribuição mensal para material, refrescos e despesas operacionais"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Exemplo: 'Contribuição mensal para material, refrescos e despesas operacionais'
+                    Exemplo: 'Contribuição mensal para material, refrescos e
+                    despesas operacionais'
                   </p>
                 </div>
               </div>
@@ -479,13 +499,18 @@ export const AdminConfigPage: React.FC = () => {
               </h3>
               <div className="space-y-2 text-sm text-blue-800">
                 <p>
-                  <strong>Título:</strong> Ordem Franciscana Secular{formData.nomeFraternidade ? ` - ${formData.nomeFraternidade}` : ""}
+                  <strong>Título:</strong> Ordem Franciscana Secular
+                  {formData.nomeFraternidade
+                    ? ` - ${formData.nomeFraternidade}`
+                    : ""}
                 </p>
                 <p>
-                  <strong>Logo:</strong> {logoPreview ? "Carregada ✅" : "Não carregada"}
+                  <strong>Logo:</strong>{" "}
+                  {logoPreview ? "Carregada ✅" : "Não carregada"}
                 </p>
                 <p>
-                  <strong>Valor Anual:</strong> {formatarValorComExtenso(formData.valorAnual || 0)}
+                  <strong>Valor Anual:</strong>{" "}
+                  {formatarValorComExtenso(formData.valorAnual || 0)}
                 </p>
                 {formData.descricaoAnual && (
                   <p className="ml-4 text-xs text-blue-700 italic">
@@ -493,7 +518,8 @@ export const AdminConfigPage: React.FC = () => {
                   </p>
                 )}
                 <p>
-                  <strong>Valor Mensal:</strong> {formatarValorComExtenso(formData.valorMensal || 0)}
+                  <strong>Valor Mensal:</strong>{" "}
+                  {formatarValorComExtenso(formData.valorMensal || 0)}
                 </p>
                 {formData.descricaoMensal && (
                   <p className="ml-4 text-xs text-blue-700 italic">
