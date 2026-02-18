@@ -5,9 +5,11 @@ import { Modal } from "../components/Modal.js";
 import { api } from "../services/api.js";
 import { User } from "../types/index.js";
 import { imageToBase64, isValidImageFile, getImageUrl } from "../utils/imageHelper.js";
+import { includesNormalized } from "../utils/textSearch.js";
 
 export const AdminMembrosPage: React.FC = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -148,6 +150,13 @@ export const AdminMembrosPage: React.FC = () => {
     setEditData({ ...editData, fotoBase64: null });
   };
 
+  const usuariosFiltrados = usuarios.filter((user) => {
+    const termo = busca.trim();
+    if (!termo) return true;
+
+    return includesNormalized(user.nome, termo) || includesNormalized(user.email, termo);
+  });
+
   if (loading) {
     return (
       <AdminLayout>
@@ -195,11 +204,24 @@ export const AdminMembrosPage: React.FC = () => {
           </Button>
         </div>
 
+        <div>
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome ou email"
+            className="w-full md:max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Exibindo {usuariosFiltrados.length} de {usuarios.length} membros
+          </p>
+        </div>
+
         <Card>
           {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
-            {usuarios.length > 0 ? (
-              usuarios.map((user) => (
+            {usuariosFiltrados.length > 0 ? (
+              usuariosFiltrados.map((user) => (
                 <div
                   key={user.id}
                   className="border border-gray-200 rounded-lg p-4 bg-white"
@@ -276,8 +298,8 @@ export const AdminMembrosPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {usuarios.length > 0 ? (
-                  usuarios.map((user) => (
+                {usuariosFiltrados.length > 0 ? (
+                  usuariosFiltrados.map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50">
                       <td className="px-3 md:px-6 py-4 text-sm text-gray-800">
                         {user.nome}
