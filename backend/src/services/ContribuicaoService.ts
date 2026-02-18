@@ -32,16 +32,13 @@ export class ContribuicaoService {
       throw createError(404, "Contribuição anual não encontrada");
     }
 
-    const updated = await ContribuicaoRepository.updateContribuicaoAnual(
-      id,
-      {
-        status: input.status,
-        dataPagamento:
-          input.dataPagamento && input.status === "PAGO"
-            ? new Date(input.dataPagamento)
-            : null,
-      },
-    );
+    const updated = await ContribuicaoRepository.updateContribuicaoAnual(id, {
+      status: input.status,
+      dataPagamento:
+        input.dataPagamento && input.status === "PAGO"
+          ? new Date(input.dataPagamento)
+          : null,
+    });
 
     return updated;
   }
@@ -111,16 +108,13 @@ export class ContribuicaoService {
       throw createError(404, "Contribuição mensal não encontrada");
     }
 
-    const updated = await ContribuicaoRepository.updateContribuicaoMensal(
-      id,
-      {
-        status: input.status,
-        dataPagamento:
-          input.dataPagamento && input.status === "PAGO"
-            ? new Date(input.dataPagamento)
-            : null,
-      },
-    );
+    const updated = await ContribuicaoRepository.updateContribuicaoMensal(id, {
+      status: input.status,
+      dataPagamento:
+        input.dataPagamento && input.status === "PAGO"
+          ? new Date(input.dataPagamento)
+          : null,
+    });
 
     return updated;
   }
@@ -170,10 +164,11 @@ export class ContribuicaoService {
     const yearToUse = ano || currentYear;
     const annualReferenceYear = this.getAnnualReferenceYear(yearToUse);
 
-    const anualContribuicao = await ContribuicaoRepository.findContribuicaoAnualByAno(
-      userId,
-      annualReferenceYear,
-    );
+    const anualContribuicao =
+      await ContribuicaoRepository.findContribuicaoAnualByAno(
+        userId,
+        annualReferenceYear,
+      );
     const mensalContribuicoes =
       await ContribuicaoRepository.findContribuicaoMensalByUser(
         userId,
@@ -239,7 +234,10 @@ export class ContribuicaoService {
             pendentes,
             total: 12,
           },
-          statusGeral: pendentes === 0 && anual?.status === "PAGO" ? "EM DIA" : "INADIMPLENTE",
+          statusGeral:
+            pendentes === 0 && anual?.status === "PAGO"
+              ? "EM DIA"
+              : "INADIMPLENTE",
         };
       }),
     );
