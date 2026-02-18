@@ -233,6 +233,7 @@ export class ContribuicaoService {
           tipoMembro: user.tipoMembro,
           anual: anual ? anual.status : "NÃO GERADO",
           anualId: anual ? anual.id : null,
+          anualDataPagamento: anual?.dataPagamento || null,
           mensal: {
             pagas,
             pendentes,
