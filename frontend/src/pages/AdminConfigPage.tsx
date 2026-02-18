@@ -5,22 +5,7 @@ import { api } from "../services/api.js";
 import { isValidImageFile, imageToBase64 } from "../utils/imageHelper.js";
 import { formatarValorComExtenso } from "../utils/formatCurrency.js";
 
-interface ConfigData {
-  id: string;
-  nomeFraternidade?: string;
-  logoBase64?: string;
-  valorAnual: number;
-  descricaoAnual?: string;
-  valorMensal: number;
-  descricaoMensal?: string;
-  chavePix?: string;
-  qrcodePixBase64?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export const AdminConfigPage: React.FC = () => {
-  const [config, setConfig] = useState<ConfigData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -55,7 +40,6 @@ export const AdminConfigPage: React.FC = () => {
       const configData = response.data.data || response.data;
       console.log("✅ ConfigData extraído:", configData);
 
-      setConfig(configData);
       setFormData({
         nomeFraternidade: configData.nomeFraternidade || "",
         logoBase64: configData.logoBase64 || null,
@@ -230,7 +214,7 @@ export const AdminConfigPage: React.FC = () => {
 
   return (
     <AdminLayout>
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <Card>
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold text-gray-800">
@@ -250,8 +234,11 @@ export const AdminConfigPage: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="border-b pb-6">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-6"
+          >
+            <div className="border-b pb-6 xl:border xl:border-gray-200 xl:rounded-lg xl:p-6 xl:pb-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">
                 🏷️ Identidade da Fraternidade
               </h2>
@@ -322,7 +309,7 @@ export const AdminConfigPage: React.FC = () => {
             </div>
 
             {/* Seção de Valores */}
-            <div className="border-b pb-6">
+            <div className="border-b pb-6 xl:border xl:border-gray-200 xl:rounded-lg xl:p-6 xl:pb-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">
                 💰 Valores de Contribuição
               </h2>
@@ -423,7 +410,7 @@ export const AdminConfigPage: React.FC = () => {
             </div>
 
             {/* Seção de PIX */}
-            <div className="border-b pb-6">
+            <div className="border-b pb-6 xl:col-span-2 xl:border xl:border-gray-200 xl:rounded-lg xl:p-6 xl:pb-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">
                 💳 Informações de Pagamento PIX
               </h2>
@@ -493,7 +480,7 @@ export const AdminConfigPage: React.FC = () => {
             </div>
 
             {/* Resumo */}
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-blue-50 p-4 rounded-lg xl:col-span-2">
               <h3 className="font-semibold text-blue-900 mb-2">
                 📋 Resumo das Configurações
               </h3>
@@ -538,7 +525,7 @@ export const AdminConfigPage: React.FC = () => {
             </div>
 
             {/* Botões */}
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-4 xl:col-span-2">
               <Button
                 type="submit"
                 disabled={submitting}
