@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Permite metadados públicos do SonarCloud no arquivo de configuração"
+paths = [
+  '''sonar-project\.properties'''
+]

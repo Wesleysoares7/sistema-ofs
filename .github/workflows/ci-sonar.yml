@@ -26,6 +26,7 @@ jobs:
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
+          GITLEAKS_CONFIG: .gitleaks.toml
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   quality:
@@ -65,7 +66,7 @@ jobs:
         run: npm run build
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
