@@ -72,9 +72,14 @@ export const AdminConfigPage: React.FC = () => {
       if (configData.logoBase64) {
         setLogoPreview(configData.logoBase64);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Erro ao carregar configurações:", error);
-      setErrorMessage("Erro ao carregar configurações");
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        (typeof error?.response?.data === "string" ? error.response.data : null) ||
+        "Erro ao carregar configurações";
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }
