@@ -8,8 +8,16 @@ export interface JwtPayload {
 }
 
 export function generateToken(payload: JwtPayload): string {
-  return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "24h",
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET não configurado");
+  }
+
+  const expiresIn = (process.env.JWT_EXPIRES_IN ||
+    "24h") as jwt.SignOptions["expiresIn"];
+
+  return jwt.sign(payload, secret, {
+    expiresIn,
   });
 }
 
