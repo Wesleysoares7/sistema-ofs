@@ -7,7 +7,7 @@ export const Button: React.FC<
     variant?: "primary" | "secondary" | "danger";
     loading?: boolean;
   }
-> = ({ variant = "primary", loading = false, children, ...props }) => {
+> = ({ variant = "primary", loading = false, className = "", children, ...props }) => {
   const variants = {
     primary: "bg-primary-600 hover:bg-primary-700 text-white",
     secondary: "bg-gray-300 hover:bg-gray-400 text-gray-800",
@@ -16,7 +16,7 @@ export const Button: React.FC<
 
   return (
     <button
-      className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]}`}
+      className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
       disabled={loading}
       {...props}
     >
