@@ -11,6 +11,7 @@ interface ContributionReport {
   tipoMembro: string;
   anual: string;
   anualId?: string;
+  anualDataPagamento?: string | null;
   mensal: {
     pagas: number;
     pendentes: number;
@@ -39,6 +40,17 @@ export const AdminContribuicoesPage: React.FC = () => {
     MonthlyContribution[]
   >([]);
   const anoReferenciaAnual = ano - 1;
+
+  const toDateInputValue = (isoDate?: string | null) => {
+    if (!isoDate) return "";
+    const date = new Date(isoDate);
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 10);
+  };
+
+  const toISODateFromInput = (dateInput: string) => {
+    return `${dateInput}T12:00:00.000Z`;
+  };
 
   useEffect(() => {
     loadRelatorio();
@@ -74,7 +86,10 @@ export const AdminContribuicoesPage: React.FC = () => {
         type: "anual",
         row: { ...row, anualId: row.anualId || "created" },
       });
-      setEditData({ status: row.anual });
+      setEditData({
+        status: row.anual,
+        dataPagamento: toDateInputValue(row.anualDataPagamento),
+      });
       setIsModalOpen(true);
     } catch (error: any) {
       console.error("Erro ao preparar contribuição anual:", error);
@@ -106,6 +121,13 @@ export const AdminContribuicoesPage: React.FC = () => {
 
       console.log("Contribuições mensais carregadas:", response.data);
       setMonthlyContributions(response.data);
+      const statusById = Object.fromEntries(
+        response.data.map((item) => [item.id, item.status]),
+      );
+      const dateById = Object.fromEntries(
+        response.data.map((item) => [item.id, toDateInputValue(item.dataPagamento)]),
+      );
+      setEditData({ statusById, dateById });
       setEditingContribution({ type: "mensal", row });
       setIsModalOpen(true);
     } catch (error) {
@@ -138,18 +160,53 @@ export const AdminContribuicoesPage: React.FC = () => {
           return;
         }
 
+        if (editData.status === "PAGO" && !editData.dataPagamento) {
+          alert("Informe a data de pagamento da contribuição anual.");
+          return;
+        }
+
         await api.put(`/contribuicoes/anual/${updatedRow.anualId}`, {
           status: editData.status,
-          dataPagamento: editData.status === "PAGO" ? new Date() : null,
+          dataPagamento:
+            editData.status === "PAGO"
+              ? toISODateFromInput(editData.dataPagamento)
+              : null,
         });
       } else {
         // Salvar todas as contribuições mensais editadas
         for (const contribution of monthlyContributions) {
-          const newStatus = editData[contribution.id] || contribution.status;
-          if (newStatus !== contribution.status) {
+          const newStatus =
+            editData.statusById?.[contribution.id] || contribution.status;
+          const newDate = editData.dateById?.[contribution.id] || "";
+          const oldDate = toDateInputValue(contribution.dataPagamento);
+
+          if (newStatus === "PAGO" && !newDate) {
+            alert(
+              `Informe a data de pagamento para ${[
+                "Jan",
+                "Fev",
+                "Mar",
+                "Abr",
+                "Mai",
+                "Jun",
+                "Jul",
+                "Ago",
+                "Set",
+                "Out",
+                "Nov",
+                "Dez",
+              ][contribution.mes - 1]}.`,
+            );
+            return;
+          }
+
+          if (newStatus !== contribution.status || newDate !== oldDate) {
             await api.put(`/contribuicoes/mensal/${contribution.id}`, {
               status: newStatus,
-              dataPagamento: newStatus === "PAGO" ? new Date() : null,
+              dataPagamento:
+                newStatus === "PAGO"
+                  ? toISODateFromInput(newDate)
+                  : null,
             });
           }
         }
@@ -342,6 +399,21 @@ export const AdminContribuicoesPage: React.FC = () => {
                 <option value="PENDENTE">⏳ Pendente</option>
               </select>
             </div>
+            {editData.status === "PAGO" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data de pagamento
+                </label>
+                <input
+                  type="date"
+                  value={editData.dataPagamento || ""}
+                  onChange={(e) =>
+                    setEditData({ ...editData, dataPagamento: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -360,41 +432,68 @@ export const AdminContribuicoesPage: React.FC = () => {
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {monthlyContributions.map((contrib) => (
-                    <button
-                      key={contrib.id}
-                      onClick={() => {
-                        const newStatus =
-                          (editData[contrib.id] || contrib.status) === "PAGO"
-                            ? "PENDENTE"
-                            : "PAGO";
-                        setEditData({
-                          ...editData,
-                          [contrib.id]: newStatus,
-                        });
-                      }}
-                      className={`p-2 rounded text-sm font-medium transition-colors ${
-                        (editData[contrib.id] || contrib.status) === "PAGO"
-                          ? "bg-green-200 text-green-800 hover:bg-green-300"
-                          : "bg-red-200 text-red-800 hover:bg-red-300"
-                      }`}
-                    >
-                      {
-                        [
-                          "Jan",
-                          "Fev",
-                          "Mar",
-                          "Abr",
-                          "Mai",
-                          "Jun",
-                          "Jul",
-                          "Ago",
-                          "Set",
-                          "Out",
-                          "Nov",
-                          "Dez",
-                        ][contrib.mes - 1]
-                      }
-                    </button>
+                    <div key={contrib.id} className="space-y-2">
+                      <button
+                        onClick={() => {
+                          const currentStatus =
+                            editData.statusById?.[contrib.id] || contrib.status;
+                          const newStatus =
+                            currentStatus === "PAGO" ? "PENDENTE" : "PAGO";
+                          setEditData({
+                            ...editData,
+                            statusById: {
+                              ...(editData.statusById || {}),
+                              [contrib.id]: newStatus,
+                            },
+                            dateById: {
+                              ...(editData.dateById || {}),
+                              [contrib.id]:
+                                newStatus === "PAGO"
+                                  ? editData.dateById?.[contrib.id] || ""
+                                  : "",
+                            },
+                          });
+                        }}
+                        className={`w-full p-2 rounded text-sm font-medium transition-colors ${
+                          (editData.statusById?.[contrib.id] || contrib.status) === "PAGO"
+                            ? "bg-green-200 text-green-800 hover:bg-green-300"
+                            : "bg-red-200 text-red-800 hover:bg-red-300"
+                        }`}
+                      >
+                        {
+                          [
+                            "Jan",
+                            "Fev",
+                            "Mar",
+                            "Abr",
+                            "Mai",
+                            "Jun",
+                            "Jul",
+                            "Ago",
+                            "Set",
+                            "Out",
+                            "Nov",
+                            "Dez",
+                          ][contrib.mes - 1]
+                        }
+                      </button>
+                      {(editData.statusById?.[contrib.id] || contrib.status) === "PAGO" && (
+                        <input
+                          type="date"
+                          value={editData.dateById?.[contrib.id] || ""}
+                          onChange={(e) =>
+                            setEditData({
+                              ...editData,
+                              dateById: {
+                                ...(editData.dateById || {}),
+                                [contrib.id]: e.target.value,
+                              },
+                            })
+                          }
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-primary-600"
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
               </>
