@@ -281,6 +281,11 @@ export const MemberDashboardPage: React.FC = () => {
                         <div className={`text-sm ${textColor}`}>
                           {contrib.status === "PAGO" ? "✓" : "—"}
                         </div>
+                        {contrib.status === "PAGO" && contrib.dataPagamento && (
+                          <div className="text-xs text-gray-700 mt-1">
+                            {new Date(contrib.dataPagamento).toLocaleDateString("pt-BR")}
+                          </div>
+                        )}
                       </div>
                     );
                   })
