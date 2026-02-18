@@ -71,9 +71,14 @@ export const AdminContribuicoesPage: React.FC = () => {
       setEditingContribution({ type: "anual", row: { ...row, anualId: row.anualId || "created" } });
       setEditData({ status: row.anual });
       setIsModalOpen(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao preparar contribuição anual:", error);
-      alert("Erro ao preparar contribuição anual. Tente novamente.");
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        (typeof error?.response?.data === "string" ? error.response.data : null) ||
+        "Erro ao preparar contribuição anual. Tente novamente.";
+      alert(message);
     } finally {
       setLoading(false);
     }
