@@ -44,7 +44,9 @@ export const AdminContribuicoesPage: React.FC = () => {
   const toDateInputValue = (isoDate?: string | null) => {
     if (!isoDate) return "";
     const date = new Date(isoDate);
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    const localDate = new Date(
+      date.getTime() - date.getTimezoneOffset() * 60000,
+    );
     return localDate.toISOString().slice(0, 10);
   };
 
@@ -125,7 +127,10 @@ export const AdminContribuicoesPage: React.FC = () => {
         response.data.map((item) => [item.id, item.status]),
       );
       const dateById = Object.fromEntries(
-        response.data.map((item) => [item.id, toDateInputValue(item.dataPagamento)]),
+        response.data.map((item) => [
+          item.id,
+          toDateInputValue(item.dataPagamento),
+        ]),
       );
       setEditData({ statusById, dateById });
       setEditingContribution({ type: "mensal", row });
@@ -182,20 +187,22 @@ export const AdminContribuicoesPage: React.FC = () => {
 
           if (newStatus === "PAGO" && !newDate) {
             alert(
-              `Informe a data de pagamento para ${[
-                "Jan",
-                "Fev",
-                "Mar",
-                "Abr",
-                "Mai",
-                "Jun",
-                "Jul",
-                "Ago",
-                "Set",
-                "Out",
-                "Nov",
-                "Dez",
-              ][contribution.mes - 1]}.`,
+              `Informe a data de pagamento para ${
+                [
+                  "Jan",
+                  "Fev",
+                  "Mar",
+                  "Abr",
+                  "Mai",
+                  "Jun",
+                  "Jul",
+                  "Ago",
+                  "Set",
+                  "Out",
+                  "Nov",
+                  "Dez",
+                ][contribution.mes - 1]
+              }.`,
             );
             return;
           }
@@ -204,9 +211,7 @@ export const AdminContribuicoesPage: React.FC = () => {
             await api.put(`/contribuicoes/mensal/${contribution.id}`, {
               status: newStatus,
               dataPagamento:
-                newStatus === "PAGO"
-                  ? toISODateFromInput(newDate)
-                  : null,
+                newStatus === "PAGO" ? toISODateFromInput(newDate) : null,
             });
           }
         }
@@ -455,7 +460,8 @@ export const AdminContribuicoesPage: React.FC = () => {
                           });
                         }}
                         className={`w-full p-2 rounded text-sm font-medium transition-colors ${
-                          (editData.statusById?.[contrib.id] || contrib.status) === "PAGO"
+                          (editData.statusById?.[contrib.id] ||
+                            contrib.status) === "PAGO"
                             ? "bg-green-200 text-green-800 hover:bg-green-300"
                             : "bg-red-200 text-red-800 hover:bg-red-300"
                         }`}
@@ -477,7 +483,8 @@ export const AdminContribuicoesPage: React.FC = () => {
                           ][contrib.mes - 1]
                         }
                       </button>
-                      {(editData.statusById?.[contrib.id] || contrib.status) === "PAGO" && (
+                      {(editData.statusById?.[contrib.id] || contrib.status) ===
+                        "PAGO" && (
                         <input
                           type="date"
                           value={editData.dateById?.[contrib.id] || ""}
