@@ -1,4 +1,5 @@
 import { Response, NextFunction } from "express";
+import * as Sentry from "@sentry/node";
 import { AppError } from "../utils/errors.js";
 
 export interface AuthRequest {
@@ -45,6 +46,15 @@ export function errorHandler(
     return res.status(413).json({
       error: "Arquivo muito grande. Reduza o tamanho da imagem e tente novamente.",
       statusCode: 413,
+    });
+  }
+
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err, {
+      tags: {
+        route: req?.originalUrl || "unknown",
+        method: req?.method || "unknown",
+      },
     });
   }
 
