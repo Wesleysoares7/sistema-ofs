@@ -157,16 +157,15 @@ export const AdminMembrosPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!isValidImageFile(file)) {
-      alert("Arquivo inválido! Use JPEG, PNG, GIF ou WebP com até 5MB.");
-      return;
-    }
-
     try {
+      isValidImageFile(file);
       const base64 = await imageToBase64(file);
       setEditData({ ...editData, fotoBase64: base64 });
-    } catch (error) {
-      alert("Erro ao processar imagem");
+    } catch (error: any) {
+      alert(
+        error?.message ||
+          "Erro ao processar imagem. Tente outro arquivo de imagem.",
+      );
     }
   };
 
