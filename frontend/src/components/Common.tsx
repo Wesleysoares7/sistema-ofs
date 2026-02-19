@@ -31,11 +31,12 @@ export const Button: React.FC<
   );
 };
 
-export const Card: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-}> = ({ children, className = "" }) => (
-  <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+export const Card: React.FC<
+  React.HTMLAttributes<HTMLDivElement> & {
+    children: React.ReactNode;
+  }
+> = ({ children, className = "", ...props }) => (
+  <div className={`bg-white rounded-lg shadow-md p-6 ${className}`} {...props}>
     {children}
   </div>
 );

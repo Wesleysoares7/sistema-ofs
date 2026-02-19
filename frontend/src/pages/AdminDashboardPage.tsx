@@ -4,21 +4,55 @@ import { AdminLayout } from "../components/Layout.js";
 import { Card, Button } from "../components/Common.js";
 import { Modal } from "../components/Modal.js";
 import { api } from "../services/api.js";
-import { DashboardStats } from "../types/index.js";
-import { User } from "../types/index.js";
+import { DashboardStats, User, Aviso, AvisoTipo } from "../types/index.js";
+
+interface AvisoFormData {
+  titulo: string;
+  mensagem: string;
+  tipo: AvisoTipo;
+  publicoAlvo: "MEMBER" | "ALL";
+  dataExpiracao: string;
+  ativo: boolean;
+}
+
+const defaultAvisoFormData: AvisoFormData = {
+  titulo: "",
+  mensagem: "",
+  tipo: "COMUNICADO",
+  publicoAlvo: "MEMBER",
+  dataExpiracao: "",
+  ativo: true,
+};
 
 export const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [loading, setLoading] = useState(true);
   const [fichaModalOpen, setFichaModalOpen] = useState(false);
   const [members, setMembers] = useState<User[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [avisosLoading, setAvisosLoading] = useState(false);
+  const [avisosSubmitting, setAvisosSubmitting] = useState(false);
+  const [editingAvisoId, setEditingAvisoId] = useState<string | null>(null);
+  const [avisoFormData, setAvisoFormData] =
+    useState<AvisoFormData>(defaultAvisoFormData);
+  const [avisoMessage, setAvisoMessage] = useState("");
+  const [avisoError, setAvisoError] = useState("");
 
   useEffect(() => {
-    loadStats();
+    loadInitialData();
   }, []);
+
+  const loadInitialData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([loadStats(), loadAvisos()]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -29,6 +63,144 @@ export const AdminDashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadAvisos = async () => {
+    try {
+      setAvisosLoading(true);
+      const response = await api.get<Aviso[]>("/avisos/admin");
+      setAvisos(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar avisos:", error);
+      setAvisoError("Erro ao carregar avisos da fraternidade.");
+    } finally {
+      setAvisosLoading(false);
+    }
+  };
+
+  const resetAvisoForm = () => {
+    setEditingAvisoId(null);
+    setAvisoFormData(defaultAvisoFormData);
+  };
+
+  const handleAvisoInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+
+    setAvisoFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleEditAviso = (aviso: Aviso) => {
+    setEditingAvisoId(aviso.id);
+    setAvisoError("");
+    setAvisoMessage("");
+    setAvisoFormData({
+      titulo: aviso.titulo,
+      mensagem: aviso.mensagem,
+      tipo: aviso.tipo,
+      publicoAlvo: aviso.publicoAlvo === "ALL" ? "ALL" : "MEMBER",
+      dataExpiracao: aviso.dataExpiracao
+        ? new Date(aviso.dataExpiracao).toISOString().slice(0, 10)
+        : "",
+      ativo: aviso.ativo,
+    });
+  };
+
+  const buildAvisoPayload = () => {
+    const payload: {
+      titulo: string;
+      mensagem: string;
+      tipo: AvisoTipo;
+      publicoAlvo: "MEMBER" | "ALL";
+      ativo: boolean;
+      dataExpiracao?: string | null;
+    } = {
+      titulo: avisoFormData.titulo.trim(),
+      mensagem: avisoFormData.mensagem.trim(),
+      tipo: avisoFormData.tipo,
+      publicoAlvo: avisoFormData.publicoAlvo,
+      ativo: avisoFormData.ativo,
+    };
+
+    if (avisoFormData.dataExpiracao) {
+      payload.dataExpiracao = new Date(
+        `${avisoFormData.dataExpiracao}T23:59:59.000Z`,
+      ).toISOString();
+    }
+
+    return payload;
+  };
+
+  const handleSaveAviso = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!avisoFormData.titulo.trim() || !avisoFormData.mensagem.trim()) {
+      setAvisoError("Preencha título e mensagem do aviso.");
+      return;
+    }
+
+    try {
+      setAvisosSubmitting(true);
+      setAvisoError("");
+      setAvisoMessage("");
+
+      const payload = buildAvisoPayload();
+
+      if (editingAvisoId) {
+        await api.put(`/avisos/${editingAvisoId}`, payload);
+        setAvisoMessage("Aviso atualizado com sucesso.");
+      } else {
+        await api.post("/avisos", payload);
+        setAvisoMessage("Aviso criado com sucesso.");
+      }
+
+      resetAvisoForm();
+      await loadAvisos();
+    } catch (error) {
+      console.error("Erro ao salvar aviso:", error);
+      setAvisoError("Não foi possível salvar o aviso.");
+    } finally {
+      setAvisosSubmitting(false);
+    }
+  };
+
+  const handleDeleteAviso = async (avisoId: string) => {
+    const confirmDelete = window.confirm("Deseja realmente excluir este aviso?");
+    if (!confirmDelete) return;
+
+    try {
+      setAvisoError("");
+      setAvisoMessage("");
+      await api.delete(`/avisos/${avisoId}`);
+      setAvisoMessage("Aviso excluído com sucesso.");
+      await loadAvisos();
+    } catch (error) {
+      console.error("Erro ao excluir aviso:", error);
+      setAvisoError("Não foi possível excluir o aviso.");
+    }
+  };
+
+  const formatarData = (value?: string | null) => {
+    if (!value) return "Sem expiração";
+    return new Date(value).toLocaleDateString("pt-BR");
+  };
+
+  const getAvisoTipoLabel = (tipo: AvisoTipo) => {
+    if (tipo === "EVENTO") return "Evento";
+    if (tipo === "LEMBRETE") return "Lembrete";
+    return "Comunicado";
+  };
+
+  const getAvisoTipoStyle = (tipo: AvisoTipo) => {
+    if (tipo === "EVENTO") return "bg-blue-100 text-blue-700";
+    if (tipo === "LEMBRETE") return "bg-amber-100 text-amber-700";
+    return "bg-green-100 text-green-700";
   };
 
   const openFichaModal = async () => {
@@ -140,6 +312,156 @@ export const AdminDashboardPage: React.FC = () => {
               Ficha Cadastral do Membro
             </Button>
           </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">
+            Avisos da Fraternidade
+          </h2>
+
+          {avisoError && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {avisoError}
+            </div>
+          )}
+
+          {avisoMessage && (
+            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+              {avisoMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSaveAviso} className="space-y-3 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                name="titulo"
+                value={avisoFormData.titulo}
+                onChange={handleAvisoInputChange}
+                placeholder="Título do aviso"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              />
+
+              <select
+                name="tipo"
+                value={avisoFormData.tipo}
+                onChange={handleAvisoInputChange}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              >
+                <option value="COMUNICADO">Comunicado</option>
+                <option value="EVENTO">Evento</option>
+                <option value="LEMBRETE">Lembrete</option>
+              </select>
+            </div>
+
+            <textarea
+              name="mensagem"
+              value={avisoFormData.mensagem}
+              onChange={handleAvisoInputChange}
+              placeholder="Mensagem do aviso"
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <select
+                name="publicoAlvo"
+                value={avisoFormData.publicoAlvo}
+                onChange={handleAvisoInputChange}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              >
+                <option value="MEMBER">Somente membros</option>
+                <option value="ALL">Todos (admin e membro)</option>
+              </select>
+
+              <input
+                type="date"
+                name="dataExpiracao"
+                value={avisoFormData.dataExpiracao}
+                onChange={handleAvisoInputChange}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="submit" variant="primary" loading={avisosSubmitting}>
+                {editingAvisoId ? "Atualizar aviso" : "Criar aviso"}
+              </Button>
+              {editingAvisoId && (
+                <Button type="button" variant="secondary" onClick={resetAvisoForm}>
+                  Cancelar edição
+                </Button>
+              )}
+            </div>
+          </form>
+
+          {avisosLoading ? (
+            <p className="text-sm text-gray-600">Carregando avisos...</p>
+          ) : avisos.length === 0 ? (
+            <p className="text-sm text-gray-600">
+              Nenhum aviso cadastrado no momento.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {avisos.map((aviso) => {
+                const expirado =
+                  !!aviso.dataExpiracao &&
+                  new Date(aviso.dataExpiracao).getTime() < Date.now();
+
+                return (
+                  <div
+                    key={aviso.id}
+                    className="rounded-lg border border-gray-200 p-4"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="font-semibold text-gray-800">{aviso.titulo}</h3>
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${getAvisoTipoStyle(
+                          aviso.tipo,
+                        )}`}
+                      >
+                        {getAvisoTipoLabel(aviso.tipo)}
+                      </span>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                        {aviso.publicoAlvo === "ALL"
+                          ? "Todos"
+                          : "Membros"}
+                      </span>
+                      {!aviso.ativo && (
+                        <span className="rounded-full bg-gray-200 px-2 py-1 text-xs text-gray-700">
+                          Inativo
+                        </span>
+                      )}
+                      {expirado && (
+                        <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-700">
+                          Expirado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-700 mb-3">{aviso.mensagem}</p>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Expiração: {formatarData(aviso.dataExpiracao)}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => handleEditAviso(aviso)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        onClick={() => handleDeleteAviso(aviso.id)}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </div>
 

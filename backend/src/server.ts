@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import contribuicaoRoutes from "./routes/contribuicoes.js";
 import configRoutes from "./routes/config.js";
+import avisoRoutes from "./routes/avisos.js";
 import { authenticate } from "./middlewares/auth.js";
 import {
   errorHandler,
@@ -54,6 +55,7 @@ app.use(logRequests);
 // Rotas
 app.use("/api/auth", authRoutes);
 app.use("/api/config", configRoutes);
+app.use("/api/avisos", avisoRoutes);
 app.use("/api/users", authenticate, userRoutes);
 app.use("/api/contribuicoes", authenticate, contribuicaoRoutes);
 
