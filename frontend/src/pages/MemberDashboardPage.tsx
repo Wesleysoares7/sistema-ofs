@@ -25,6 +25,7 @@ export const MemberDashboardPage: React.FC = () => {
   const [profile, setProfile] = useState<User | null>(null);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [anoSelecionado, setAnoSelecionado] = useState(
     new Date().getFullYear(),
   );
@@ -39,6 +40,7 @@ export const MemberDashboardPage: React.FC = () => {
 
     try {
       setLoading(true);
+      setLoadError("");
       const [dashboardResponse, configResponse, profileResponse, avisosResponse] =
         await Promise.all([
         api.get<MemberDashboard>(
@@ -55,6 +57,9 @@ export const MemberDashboardPage: React.FC = () => {
       setAvisos(avisosResponse.data);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+      setLoadError(
+        "Não foi possível carregar seu dashboard agora. Tente novamente.",
+      );
     } finally {
       setLoading(false);
     }
@@ -217,6 +222,17 @@ export const MemberDashboardPage: React.FC = () => {
           </h1>
           <p className="text-gray-600 mt-2">Dashboard de suas contribuições</p>
         </div>
+
+        {loadError && (
+          <Card>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm text-red-700 mb-3">{loadError}</p>
+              <Button variant="secondary" onClick={loadData}>
+                Tentar novamente
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {dashboard && (
           <>

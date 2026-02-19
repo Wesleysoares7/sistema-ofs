@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { createError } from "../utils/errors.js";
-
-const prisma = new PrismaClient();
+import { prisma } from "../utils/prisma.js";
 
 export type AvisoTipo = "EVENTO" | "COMUNICADO" | "LEMBRETE";
 export type AvisoPublicoAlvo = "MEMBER" | "ADMIN" | "ALL";
@@ -59,33 +58,43 @@ export class AvisoService {
   }
 
   async updateAviso(id: string, input: Partial<UpsertAvisoInput>) {
-    const existing = await prisma.aviso.findUnique({ where: { id } });
+    try {
+      return await prisma.aviso.update({
+        where: { id },
+        data: {
+          titulo: input.titulo,
+          mensagem: input.mensagem,
+          tipo: input.tipo,
+          publicoAlvo: input.publicoAlvo,
+          dataExpiracao: input.dataExpiracao,
+          ativo: input.ativo,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw createError(404, "Aviso não encontrado");
+      }
 
-    if (!existing) {
-      throw createError(404, "Aviso não encontrado");
+      throw error;
     }
-
-    return prisma.aviso.update({
-      where: { id },
-      data: {
-        titulo: input.titulo,
-        mensagem: input.mensagem,
-        tipo: input.tipo,
-        publicoAlvo: input.publicoAlvo,
-        dataExpiracao: input.dataExpiracao,
-        ativo: input.ativo,
-      },
-    });
   }
 
   async deleteAviso(id: string) {
-    const existing = await prisma.aviso.findUnique({ where: { id } });
+    try {
+      await prisma.aviso.delete({ where: { id } });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw createError(404, "Aviso não encontrado");
+      }
 
-    if (!existing) {
-      throw createError(404, "Aviso não encontrado");
+      throw error;
     }
-
-    await prisma.aviso.delete({ where: { id } });
 
     return { message: "Aviso excluído com sucesso" };
   }
