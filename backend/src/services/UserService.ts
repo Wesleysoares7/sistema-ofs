@@ -119,6 +119,7 @@ export class AuthService {
       tipoMembro: user.tipoMembro,
       fotoBase64: user.fotoBase64 || null,
       endereco: user.endereco,
+      updatedAt: user.updatedAt,
     };
   }
 

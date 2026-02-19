@@ -68,6 +68,21 @@ export interface MemberDashboard {
   };
 }
 
+export type AvisoTipo = "EVENTO" | "COMUNICADO" | "LEMBRETE";
+export type AvisoPublicoAlvo = "MEMBER" | "ADMIN" | "ALL";
+
+export interface Aviso {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  tipo: AvisoTipo;
+  publicoAlvo?: AvisoPublicoAlvo | null;
+  dataExpiracao?: string | null;
+  ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: {
