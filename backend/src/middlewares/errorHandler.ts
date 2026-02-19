@@ -28,15 +28,6 @@ export function errorHandler(
 ) {
   console.error("❌ Erro:", err.message);
 
-  if (process.env.SENTRY_DSN) {
-    Sentry.captureException(err, {
-      tags: {
-        route: req?.originalUrl || "unknown",
-        method: req?.method || "unknown",
-      },
-    });
-  }
-
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       error: err.message,
@@ -55,6 +46,15 @@ export function errorHandler(
     return res.status(413).json({
       error: "Arquivo muito grande. Reduza o tamanho da imagem e tente novamente.",
       statusCode: 413,
+    });
+  }
+
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err, {
+      tags: {
+        route: req?.originalUrl || "unknown",
+        method: req?.method || "unknown",
+      },
     });
   }
 

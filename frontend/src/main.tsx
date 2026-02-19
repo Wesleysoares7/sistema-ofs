@@ -4,11 +4,18 @@ import * as Sentry from "@sentry/react";
 import App from "./App.js";
 import "./index.css";
 
+const parsedSentryTraceSampleRate = Number(
+  import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE,
+);
+const sentryTraceSampleRate = Number.isFinite(parsedSentryTraceSampleRate)
+  ? parsedSentryTraceSampleRate
+  : 0.1;
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     environment: import.meta.env.MODE,
-    tracesSampleRate: Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE || 0.1),
+    tracesSampleRate: sentryTraceSampleRate,
   });
 }
 

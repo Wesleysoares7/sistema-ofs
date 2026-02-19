@@ -18,12 +18,18 @@ const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
 const sentryDsn = process.env.SENTRY_DSN;
+const parsedSentryTraceSampleRate = Number(
+  process.env.SENTRY_TRACES_SAMPLE_RATE,
+);
+const sentryTraceSampleRate = Number.isFinite(parsedSentryTraceSampleRate)
+  ? parsedSentryTraceSampleRate
+  : 0.1;
 
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
     environment: process.env.NODE_ENV || "development",
-    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),
+    tracesSampleRate: sentryTraceSampleRate,
   });
 }
 
