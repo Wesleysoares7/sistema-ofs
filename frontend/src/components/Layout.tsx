@@ -3,6 +3,30 @@ import { useAuth } from "../hooks/useAuth.js";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api.js";
 
+const BRANDING_STORAGE_KEY = "ofs:branding";
+
+type BrandingData = {
+  nomeFraternidade?: string;
+  logoBase64?: string;
+};
+
+const loadStoredBranding = (): BrandingData | null => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(BRANDING_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as BrandingData;
+    return {
+      nomeFraternidade: parsed?.nomeFraternidade,
+      logoBase64: parsed?.logoBase64,
+    };
+  } catch {
+    return null;
+  }
+};
+
 const assinaturaSistema = (
   <p className="text-xs text-gray-600 text-center py-3 border-t border-primary-100 bg-white">
     Produzido por{" "}
@@ -22,20 +46,28 @@ export const Navbar: React.FC<{ onMenuToggle?: () => void }> = ({
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [branding, setBranding] = React.useState<{
-    nomeFraternidade?: string;
-    logoBase64?: string;
-  } | null>(null);
+  const [branding, setBranding] = React.useState<BrandingData | null>(() =>
+    loadStoredBranding(),
+  );
 
   React.useEffect(() => {
     const loadBranding = async () => {
       try {
         const response = await api.get<any>("/config");
         const configData = response.data.data || response.data;
-        setBranding({
+        const nextBranding = {
           nomeFraternidade: configData.nomeFraternidade,
           logoBase64: configData.logoBase64,
-        });
+        };
+
+        setBranding(nextBranding);
+
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            BRANDING_STORAGE_KEY,
+            JSON.stringify(nextBranding),
+          );
+        }
       } catch (error) {
         console.error("Erro ao carregar identidade visual:", error);
       }
