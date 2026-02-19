@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { imageToBase64, isValidImageFile } from "./imageHelper.js";
+import { imageToBase64, isValidImageFile, getImageUrl } from "./imageHelper.js";
 
 class MockImage {
   onload: null | (() => void) = null;
@@ -100,5 +100,139 @@ describe("imageHelper", () => {
 
     expect(mockCanvas.toBlob).toHaveBeenCalled();
     expect(result.startsWith("data:image/jpeg;base64,")).toBe(true);
+  });
+
+  it("returns fallback image when fotoBase64 is null", () => {
+    const result = getImageUrl(null);
+
+    expect(result).toContain("data:image/svg+xml");
+  });
+
+  it("returns original image when fotoBase64 exists", () => {
+    const image = "data:image/png;base64,abc";
+
+    expect(getImageUrl(image)).toBe(image);
+  });
+
+  it("throws when image loading fails during compression", async () => {
+    class ErrorImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+      width = 1000;
+      height = 1000;
+
+      set src(_value: string) {
+        setTimeout(() => {
+          this.onerror?.();
+        }, 0);
+      }
+    }
+
+    Object.defineProperty(globalThis, "Image", {
+      value: ErrorImage,
+      configurable: true,
+    });
+
+    const largeContent = new Uint8Array(5 * 1024 * 1024 + 10);
+    const file = new File([largeContent], "quebrada.jpg", {
+      type: "image/jpeg",
+    });
+
+    await expect(imageToBase64(file)).rejects.toThrow(
+      "Não foi possível carregar a imagem",
+    );
+  });
+
+  it("throws when canvas context is unavailable", async () => {
+    const largeContent = new Uint8Array(5 * 1024 * 1024 + 20);
+    const file = new File([largeContent], "sem-contexto.jpg", {
+      type: "image/jpeg",
+    });
+
+    const mockCanvas = {
+      getContext: vi.fn(() => null),
+      toBlob: vi.fn(),
+      width: 0,
+      height: 0,
+    } as unknown as HTMLCanvasElement;
+
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === "canvas") {
+        return mockCanvas;
+      }
+      return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
+    });
+
+    await expect(imageToBase64(file)).rejects.toThrow(
+      "Não foi possível processar a imagem",
+    );
+  });
+
+  it("throws when canvas conversion returns null blob", async () => {
+    const largeContent = new Uint8Array(5 * 1024 * 1024 + 30);
+    const file = new File([largeContent], "blob-null.jpg", {
+      type: "image/jpeg",
+    });
+
+    const mockCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ({
+        fillStyle: "",
+        fillRect: vi.fn(),
+        clearRect: vi.fn(),
+        drawImage: vi.fn(),
+      })),
+      toBlob: vi.fn((callback: (blob: Blob | null) => void) => {
+        callback(null);
+      }),
+    } as unknown as HTMLCanvasElement;
+
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === "canvas") {
+        return mockCanvas;
+      }
+      return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
+    });
+
+    await expect(imageToBase64(file)).rejects.toThrow(
+      "Não foi possível processar a imagem",
+    );
+  });
+
+  it("throws when image remains larger than 5MB after max attempts", async () => {
+    const largeContent = new Uint8Array(5 * 1024 * 1024 + 40);
+    const file = new File([largeContent], "imensa.webp", {
+      type: "image/webp",
+    });
+
+    const mockCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ({
+        fillStyle: "",
+        fillRect: vi.fn(),
+        clearRect: vi.fn(),
+        drawImage: vi.fn(),
+      })),
+      toBlob: vi.fn((callback: (blob: Blob | null) => void, type?: string) => {
+        callback(
+          new Blob([new Uint8Array(6 * 1024 * 1024)], {
+            type: type || "image/webp",
+          }),
+        );
+      }),
+    } as unknown as HTMLCanvasElement;
+
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === "canvas") {
+        return mockCanvas;
+      }
+      return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
+    });
+
+    await expect(imageToBase64(file)).rejects.toThrow(
+      "Não foi possível reduzir a imagem para até 5MB. Tente uma imagem menor.",
+    );
   });
 });
