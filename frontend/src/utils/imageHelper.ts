@@ -5,7 +5,9 @@ const fileToDataUrl = (file: File): Promise<string> => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
+    reader.onerror = () => {
+      reject(new Error("Não foi possível ler o arquivo de imagem"));
+    };
   });
 };
 
@@ -14,7 +16,9 @@ const blobToDataUrl = (blob: Blob): Promise<string> => {
     const reader = new FileReader();
     reader.readAsDataURL(blob);
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
+    reader.onerror = () => {
+      reject(new Error("Não foi possível converter a imagem processada"));
+    };
   });
 };
 
