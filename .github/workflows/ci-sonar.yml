@@ -65,6 +65,10 @@ jobs:
         working-directory: frontend
         run: npm run test:coverage
 
+      - name: Normalize lcov paths for Sonar
+        run: |
+          node -e "const fs=require('fs');const p='frontend/coverage/lcov.info';let c=fs.readFileSync(p,'utf8');c=c.replace(/\\r\\n/g,'\\n').replace(/^SF:src[\\\\/]/gm,'SF:frontend/src/').replace(/\\\\/g,'/');fs.writeFileSync(p,c);console.log(c.split('\\n').slice(0,6).join('\\n'));"
+
       - name: Build frontend
         working-directory: frontend
         run: npm run build
