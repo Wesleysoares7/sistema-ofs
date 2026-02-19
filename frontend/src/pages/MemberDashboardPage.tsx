@@ -183,19 +183,20 @@ export const MemberDashboardPage: React.FC = () => {
     return new Date(profile.updatedAt).toLocaleDateString("pt-BR");
   }, [profile?.updatedAt]);
 
-  const financeStatusLabel =
-    financeStatus === "EM_DIA"
-      ? "Em dia"
-      : financeStatus === "PROXIMO_VENCIMENTO"
-        ? "Próximo vencimento"
-        : "Pendente";
+  const financeStatusLabelMap: Record<typeof financeStatus, string> = {
+    EM_DIA: "Em dia",
+    PROXIMO_VENCIMENTO: "Próximo vencimento",
+    PENDENTE: "Pendente",
+  };
 
-  const financeStatusStyle =
-    financeStatus === "EM_DIA"
-      ? "bg-green-100 text-green-700"
-      : financeStatus === "PROXIMO_VENCIMENTO"
-        ? "bg-yellow-100 text-yellow-700"
-        : "bg-red-100 text-red-700";
+  const financeStatusStyleMap: Record<typeof financeStatus, string> = {
+    EM_DIA: "bg-green-100 text-green-700",
+    PROXIMO_VENCIMENTO: "bg-yellow-100 text-yellow-700",
+    PENDENTE: "bg-red-100 text-red-700",
+  };
+
+  const financeStatusLabel = financeStatusLabelMap[financeStatus];
+  const financeStatusStyle = financeStatusStyleMap[financeStatus];
 
   if (loading) {
     return (

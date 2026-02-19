@@ -171,7 +171,9 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   const handleDeleteAviso = async (avisoId: string) => {
-    const confirmDelete = window.confirm("Deseja realmente excluir este aviso?");
+    const confirmDelete = globalThis.confirm(
+      "Deseja realmente excluir este aviso?",
+    );
     if (!confirmDelete) return;
 
     try {
@@ -228,8 +230,81 @@ export const AdminDashboardPage: React.FC = () => {
         ? `${baseUrl}?mode=all`
         : `${baseUrl}?id=${selectedMemberId}`;
 
-    window.open(url, "_blank", "noopener,noreferrer");
+    globalThis.open(url, "_blank", "noopener,noreferrer");
     setFichaModalOpen(false);
+  };
+
+  const renderAvisosContent = () => {
+    if (avisosLoading) {
+      return <p className="text-sm text-gray-600">Carregando avisos...</p>;
+    }
+
+    if (avisos.length === 0) {
+      return (
+        <p className="text-sm text-gray-600">Nenhum aviso cadastrado no momento.</p>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {avisos.map((aviso) => {
+          const expirado =
+            !!aviso.dataExpiracao &&
+            new Date(aviso.dataExpiracao).getTime() < Date.now();
+
+          return (
+            <div
+              key={aviso.id}
+              className="rounded-lg border border-gray-200 p-4"
+            >
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <h3 className="font-semibold text-gray-800">{aviso.titulo}</h3>
+                <span
+                  className={`rounded-full px-2 py-1 text-xs font-medium ${getAvisoTipoStyle(
+                    aviso.tipo,
+                  )}`}
+                >
+                  {getAvisoTipoLabel(aviso.tipo)}
+                </span>
+                <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                  {aviso.publicoAlvo === "ALL" ? "Todos" : "Membros"}
+                </span>
+                {!aviso.ativo && (
+                  <span className="rounded-full bg-gray-200 px-2 py-1 text-xs text-gray-700">
+                    Inativo
+                  </span>
+                )}
+                {expirado && (
+                  <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-700">
+                    Expirado
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-700 mb-3">{aviso.mensagem}</p>
+              <p className="text-xs text-gray-500 mb-3">
+                Expiração: {formatarData(aviso.dataExpiracao)}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => handleEditAviso(aviso)}
+                >
+                  Editar
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => handleDeleteAviso(aviso.id)}
+                >
+                  Excluir
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   if (loading) {
@@ -394,74 +469,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </form>
 
-          {avisosLoading ? (
-            <p className="text-sm text-gray-600">Carregando avisos...</p>
-          ) : avisos.length === 0 ? (
-            <p className="text-sm text-gray-600">
-              Nenhum aviso cadastrado no momento.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {avisos.map((aviso) => {
-                const expirado =
-                  !!aviso.dataExpiracao &&
-                  new Date(aviso.dataExpiracao).getTime() < Date.now();
-
-                return (
-                  <div
-                    key={aviso.id}
-                    className="rounded-lg border border-gray-200 p-4"
-                  >
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-gray-800">{aviso.titulo}</h3>
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${getAvisoTipoStyle(
-                          aviso.tipo,
-                        )}`}
-                      >
-                        {getAvisoTipoLabel(aviso.tipo)}
-                      </span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                        {aviso.publicoAlvo === "ALL"
-                          ? "Todos"
-                          : "Membros"}
-                      </span>
-                      {!aviso.ativo && (
-                        <span className="rounded-full bg-gray-200 px-2 py-1 text-xs text-gray-700">
-                          Inativo
-                        </span>
-                      )}
-                      {expirado && (
-                        <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-700">
-                          Expirado
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-700 mb-3">{aviso.mensagem}</p>
-                    <p className="text-xs text-gray-500 mb-3">
-                      Expiração: {formatarData(aviso.dataExpiracao)}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => handleEditAviso(aviso)}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        onClick={() => handleDeleteAviso(aviso.id)}
-                      >
-                        Excluir
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {renderAvisosContent()}
         </Card>
       </div>
 
