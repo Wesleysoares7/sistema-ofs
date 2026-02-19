@@ -1,5 +1,6 @@
 import express, { Express } from "express";
 import cors from "cors";
+import * as Sentry from "@sentry/node";
 import "dotenv/config";
 
 import authRoutes from "./routes/auth.js";
@@ -15,6 +16,16 @@ import { limiter, logRequests } from "./middlewares/index.js";
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
+
+const sentryDsn = process.env.SENTRY_DSN;
+
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),
+  });
+}
 
 // Middlewares globais
 app.use(express.json({ limit: "10mb" }));
@@ -55,6 +66,9 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`✅ Servidor rodando na porta ${PORT}`);
   console.log(`🌍 Ambiente: ${process.env.NODE_ENV || "development"}`);
+  if (sentryDsn) {
+    console.log("🛡️ Sentry monitoramento: ativo");
+  }
 });
 
 export default app;

@@ -1,4 +1,5 @@
 import { Response, NextFunction } from "express";
+import * as Sentry from "@sentry/node";
 import { AppError } from "../utils/errors.js";
 
 export interface AuthRequest {
@@ -26,6 +27,15 @@ export function errorHandler(
   next: NextFunction,
 ) {
   console.error("❌ Erro:", err.message);
+
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err, {
+      tags: {
+        route: req?.originalUrl || "unknown",
+        method: req?.method || "unknown",
+      },
+    });
+  }
 
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
