@@ -235,4 +235,13 @@ describe("imageHelper", () => {
       "Não foi possível reduzir a imagem para até 5MB. Tente uma imagem menor.",
     );
   });
+
+  it("rejects GIF larger than 5MB to avoid losing animation/transparency", async () => {
+    const largeContent = new Uint8Array(5 * 1024 * 1024 + 50);
+    const file = new File([largeContent], "animado.gif", { type: "image/gif" });
+
+    await expect(imageToBase64(file)).rejects.toThrow(
+      "GIF acima de 5MB não é suportado para compressão automática. Use um GIF menor ou outro formato.",
+    );
+  });
 });

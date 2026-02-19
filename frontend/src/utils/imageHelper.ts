@@ -117,6 +117,12 @@ export const imageToBase64 = async (file: File): Promise<string> => {
     return fileToDataUrl(file);
   }
 
+  if (file.type === "image/gif") {
+    throw new Error(
+      "GIF acima de 5MB não é suportado para compressão automática. Use um GIF menor ou outro formato.",
+    );
+  }
+
   return compressImageToMaxSize(file);
 };
 
