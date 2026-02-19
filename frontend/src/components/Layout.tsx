@@ -53,8 +53,8 @@ export const Navbar: React.FC<{ onMenuToggle?: () => void }> = ({
 
   return (
     <nav className="bg-primary-600 text-white shadow-lg">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center space-x-3">
+      <div className="container mx-auto px-4 py-3 md:py-4 flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {onMenuToggle && (
             <button
               type="button"
@@ -76,17 +76,19 @@ export const Navbar: React.FC<{ onMenuToggle?: () => void }> = ({
               🕊️
             </div>
           )}
-          <h1 className="text-2xl font-bold">OFS</h1>
-          <span className="text-sm">{tituloSistema}</span>
+          <h1 className="text-xl md:text-2xl font-bold">OFS</h1>
+          <span className="hidden sm:block text-xs sm:text-sm leading-tight text-white/90 truncate">
+            {tituloSistema}
+          </span>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <span className="text-sm">
+        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3 sm:gap-4">
+          <span className="text-xs sm:text-sm whitespace-nowrap">
             Olá, <strong>{user?.nome}</strong>
           </span>
           <button
             onClick={handleLogout}
-            className="bg-primary-700 hover:bg-primary-800 px-4 py-2 rounded-lg transition-colors"
+            className="bg-primary-700 hover:bg-primary-800 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
           >
             Sair
           </button>
