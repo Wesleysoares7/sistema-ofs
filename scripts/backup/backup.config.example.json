@@ -1,0 +1,12 @@
+{
+  "backupRoot": "C:\\OFS\\backups",
+  "databaseUrl": "",
+  "pgDumpPath": "",
+  "pgRestorePath": "",
+  "retentionDays": 30,
+  "includeEnvFiles": [
+    "backend/.env",
+    "frontend/.env"
+  ],
+  "includePaths": []
+}
