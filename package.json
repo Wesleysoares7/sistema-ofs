@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "backup": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\backup\\New-OFSBackup.ps1",
+    "backup:schedule": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\backup\\Register-OFSBackupTask.ps1 -Time 10:00",
+    "backup:check": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\backup\\Check-OFSBackupHealth.ps1",
     "postinstall": "npm --prefix backend install --include=dev",
     "build": "npm --prefix backend run build",
     "start": "npm --prefix backend run start"
