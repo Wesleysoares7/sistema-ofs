@@ -11,19 +11,35 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum FraternidadeStatus {
+  ATIVA
+  INATIVA
+}
+
+enum UserRole {
+  ADMIN_REGIONAL
+  ADMIN_LOCAL
+  IRMAO_MEMBRO
+  ADMIN
+  MEMBER
+}
+
 model User {
   id        String   @id @default(cuid())
   nome      String
-  cpf       String   @unique
+  cpf       String?  @unique
   dataNascimento DateTime
   telefone  String
   email     String   @unique
   senha     String
   fotoBase64 String?  // Foto em base64 (opcional)
   
-  role      String   @default("MEMBER") // ADMIN, MEMBER
+  role      UserRole @default(IRMAO_MEMBRO) // ADMIN_REGIONAL, ADMIN_LOCAL, IRMAO_MEMBRO (ADMIN/MEMBER legado)
   status    String   @default("PENDENTE") // PENDENTE, ATIVO, INATIVO
   tipoMembro String?  // INICIANTE, FORMANDO, PROFESSO
+
+  fraternidadeId String?
+  fraternidade   Fraternidade? @relation(fields: [fraternidadeId], references: [id], onDelete: SetNull)
   
   endereco  Endereco?
   contribuicaoAnual ContribuicaoAnual[]
@@ -31,6 +47,9 @@ model User {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([fraternidadeId])
+  @@index([role])
 }
 
 model Endereco {
@@ -86,8 +105,6 @@ model Config {
   logoBase64            String?  // Logo do sistema em base64
   valorAnual            Float    @default(0)
   descricaoAnual        String?  // Descrição do valor anual
-  valorMensal           Float    @default(0)
-  descricaoMensal       String?  // Descrição do valor mensal
   chavePix              String?
   qrcodePixBase64       String?  // QR code PIX em base64
   
@@ -108,4 +125,40 @@ model Aviso {
   updatedAt     DateTime @updatedAt
 
   @@index([publicoAlvo, ativo, dataExpiracao])
+}
+
+model Fraternidade {
+  id              String             @id @default(cuid())
+  nomeFraternidade String
+  cidade          String
+  distrito        String
+  dataFundacao    DateTime
+  status          FraternidadeStatus @default(ATIVA)
+  contatoMinistro String
+
+  users           User[]
+  configuracaoFinanceira ConfiguracaoFinanceiraFraternidade?
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([nomeFraternidade, cidade])
+  @@index([distrito])
+  @@index([status])
+}
+
+model ConfiguracaoFinanceiraFraternidade {
+  id             String       @id @default(cuid())
+  fraternidadeId String       @unique
+  fraternidade   Fraternidade @relation(fields: [fraternidadeId], references: [id], onDelete: Cascade)
+
+  mensalAtiva    Boolean      @default(false)
+  valorMensal    Float?
+  chavePix       String?
+  qrcodePixBase64 String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([mensalAtiva])
 }
