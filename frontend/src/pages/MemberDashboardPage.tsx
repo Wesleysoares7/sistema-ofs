@@ -11,10 +11,13 @@ interface Config {
   id: string;
   valorAnual: number;
   descricaoAnual?: string;
-  valorMensal: number;
-  descricaoMensal?: string;
   chavePix?: string;
   qrcodePixBase64?: string;
+}
+
+interface FraternidadeFinanceiraConfig {
+  mensalAtiva: boolean;
+  valorMensal: number | null;
 }
 
 export const MemberDashboardPage: React.FC = () => {
@@ -22,6 +25,8 @@ export const MemberDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [dashboard, setDashboard] = useState<MemberDashboard | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
+  const [financialConfig, setFinancialConfig] =
+    useState<FraternidadeFinanceiraConfig | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,20 +46,59 @@ export const MemberDashboardPage: React.FC = () => {
     try {
       setLoading(true);
       setLoadError("");
-      const [dashboardResponse, configResponse, profileResponse, avisosResponse] =
-        await Promise.all([
+      const [
+        dashboardResult,
+        configResult,
+        financialConfigResult,
+        profileResult,
+        avisosResult,
+      ] =
+        await Promise.allSettled([
         api.get<MemberDashboard>(
           `/contribuicoes/dashboard/member/${user.id}?ano=${anoSelecionado}`,
         ),
         api.get<Config>("/config"),
+        api.get<{ data: FraternidadeFinanceiraConfig }>(
+          "/config/fraternidade-financeira",
+        ),
         api.get<User>("/auth/profile"),
         api.get<Aviso[]>("/avisos"),
       ]);
 
-      setDashboard(dashboardResponse.data);
-      setConfig(configResponse.data);
-      setProfile(profileResponse.data);
-      setAvisos(avisosResponse.data);
+      if (dashboardResult.status === "fulfilled") {
+        setDashboard(dashboardResult.value.data);
+      } else {
+        setDashboard(null);
+        setLoadError(
+          "Não foi possível carregar suas informações financeiras agora. Tente novamente.",
+        );
+      }
+
+      if (configResult.status === "fulfilled") {
+        setConfig(configResult.value.data);
+      } else {
+        setConfig(null);
+      }
+
+      if (financialConfigResult.status === "fulfilled") {
+        setFinancialConfig(
+          financialConfigResult.value.data.data || financialConfigResult.value.data,
+        );
+      } else {
+        setFinancialConfig(null);
+      }
+
+      if (profileResult.status === "fulfilled") {
+        setProfile(profileResult.value.data);
+      } else {
+        setProfile(null);
+      }
+
+      if (avisosResult.status === "fulfilled") {
+        setAvisos(avisosResult.value.data);
+      } else {
+        setAvisos([]);
+      }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       setLoadError(
@@ -216,15 +260,25 @@ export const MemberDashboardPage: React.FC = () => {
   return (
     <MemberLayout>
       <div className="space-y-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Olá, {user?.nome}!
-          </h1>
-          <p className="text-gray-600 mt-2">Dashboard de suas contribuições</p>
+        <div className="surface-panel rounded-3xl p-6 md:p-8 border border-white/70 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-sm font-semibold text-primary-700">
+                <span>👤</span>
+                Área do membro
+              </div>
+              <h1 className="mt-4 text-3xl md:text-4xl font-extrabold text-gray-900">
+                Olá, {user?.nome}!
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Dashboard de suas contribuições e do seu cadastro
+              </p>
+            </div>
+          </div>
         </div>
 
         {loadError && (
-          <Card>
+          <Card className="border border-primary-100">
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <p className="text-sm text-red-700 mb-3">{loadError}</p>
               <Button variant="secondary" onClick={loadData}>
@@ -240,9 +294,11 @@ export const MemberDashboardPage: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800">
-                    Olá, {profile?.nome || user?.nome} 👋
+                    Resumo do perfil
                   </h2>
-                  <p className="text-gray-600 mt-1">Que bom te ver por aqui.</p>
+                  <p className="text-gray-600 mt-1">
+                    Status atual e tipo de vínculo na fraternidade.
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge status={profile?.status || user?.status || "ATIVO"} />
@@ -253,7 +309,44 @@ export const MemberDashboardPage: React.FC = () => {
               </div>
             </Card>
 
-            <Card className="border border-primary-200">
+            <Card className="border border-primary-100">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Resumo financeiro</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Visão rápida da sua situação de contribuição.
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${financeStatusStyle}`}>
+                  {financeStatusLabel}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-gray-500 text-sm">Contribuição anual</p>
+                  <p className="font-semibold text-gray-800">
+                    {formatarValorComExtenso(config?.valorAnual || 0)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-gray-500 text-sm">Contribuição mensal</p>
+                  <p className="font-semibold text-gray-800">
+                    {financialConfig?.mensalAtiva
+                      ? formatarValorComExtenso(financialConfig?.valorMensal || 0)
+                      : "Não configurada"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <p className="text-gray-500 text-sm">Mensais pendentes</p>
+                  <p className="font-semibold text-gray-800">
+                    {dashboard?.resumo?.mensal?.pendentes ?? 0}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="border border-primary-100">
               <h3 className="text-lg font-semibold text-gray-800">Próxima ação</h3>
               <p className="text-sm text-gray-600 mt-1 mb-4">
                 {primaryAction.description}
@@ -305,7 +398,7 @@ export const MemberDashboardPage: React.FC = () => {
               </div>
             </Card>
 
-            <Card id="saude-financeira">
+            <Card id="saude-financeira" className="border border-primary-100">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">Saúde financeira</h3>
@@ -320,20 +413,20 @@ export const MemberDashboardPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">Mensais pagas</p>
-                  <p className="text-2xl font-bold text-green-600">{dashboard.resumo.mensal.pagas}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">Mensais pendentes</p>
-                  <p className="text-2xl font-bold text-red-600">{dashboard.resumo.mensal.pendentes}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 mb-1">Contribuição anual</p>
                   <p className="text-base font-semibold text-gray-700">
                     {dashboard.anualContribuicoes[0]?.status === "PAGO"
                       ? "Em dia"
                       : "Pendente"}
                   </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Mensais pagas</p>
+                  <p className="text-2xl font-bold text-green-600">{dashboard.resumo.mensal.pagas}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Mensais pendentes</p>
+                  <p className="text-2xl font-bold text-red-600">{dashboard.resumo.mensal.pendentes}</p>
                 </div>
               </div>
 
@@ -350,9 +443,15 @@ export const MemberDashboardPage: React.FC = () => {
                 <div className="rounded-lg border border-gray-200 p-3">
                   <p className="text-gray-500">Contribuição mensal</p>
                   <p className="font-semibold text-gray-800">
-                    {formatarValorComExtenso(config?.valorMensal || 0)}
+                    {financialConfig?.mensalAtiva
+                      ? formatarValorComExtenso(financialConfig?.valorMensal || 0)
+                      : "Não configurada"}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Pagamento recorrente mensal</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {financialConfig?.mensalAtiva
+                      ? "Pagamento recorrente mensal"
+                      : "A mensalidade é definida pela sua fraternidade local"}
+                  </p>
                 </div>
               </div>
 
@@ -372,7 +471,10 @@ export const MemberDashboardPage: React.FC = () => {
 
             <Card>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Ações rápidas</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <Button variant="primary" onClick={() => navigate("/member/financeiro")}>
+                  Financeiro
+                </Button>
                 <Button variant="primary" onClick={() => navigate("/member/profile")}>
                   Meu Perfil
                 </Button>
@@ -441,7 +543,7 @@ export const MemberDashboardPage: React.FC = () => {
               </div>
             </Card>
 
-            <Card id="historico-contribuicoes">
+            <Card id="historico-contribuicoes" className="border border-primary-100">
               <div className="flex items-center gap-3 mb-4">
                 <h2 className="text-xl font-bold text-gray-800">Histórico de contribuições</h2>
                 <select
