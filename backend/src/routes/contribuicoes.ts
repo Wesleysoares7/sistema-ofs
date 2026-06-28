@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { ContribuicaoController } from "../controllers/ContribuicaoController.js";
-import { authenticate, requireAdmin, requireActive } from "../middlewares/auth.js";
+import {
+  authenticate,
+  requireActive,
+  requireAdmin,
+  requireLocalOrRegionalAdmin,
+  requireRegionalAdmin,
+} from "../middlewares/auth.js";
 import { validateBody } from "../middlewares/validation.js";
 import {
   updateContribuicaoAnualSchema,
@@ -8,6 +14,23 @@ import {
 } from "../schemas/index.js";
 
 const router = Router();
+
+// EXERCÍCIO FINANCEIRO
+// Criar exercício anual (apenas administrador regional)
+router.post(
+  "/exercicio/anual",
+  authenticate,
+  requireRegionalAdmin,
+  ContribuicaoController.createAnnualExercise,
+);
+
+// Gerar mensalidades para exercício (admin local da fraternidade ou regional)
+router.post(
+  "/exercicio/mensal",
+  authenticate,
+  requireLocalOrRegionalAdmin,
+  ContribuicaoController.createMonthlyExercise,
+);
 
 // CONTRIBUIÇÃO ANUAL
 // Listar anual por usuário
@@ -30,7 +53,7 @@ router.put(
 router.post(
   "/anual/:userId/missing",
   authenticate,
-  requireAdmin,
+  requireRegionalAdmin,
   ContribuicaoController.createMissingAnnualContributions,
 );
 
