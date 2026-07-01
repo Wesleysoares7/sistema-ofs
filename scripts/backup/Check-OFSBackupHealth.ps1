@@ -1,13 +1,42 @@
 [CmdletBinding()]
 param(
     [string]$TaskName = 'OFS-Daily-Backup',
-    [string]$BackupDir = 'C:\OFS\backups',
+    [string]$ConfigPath,
+    [string]$BackupDir,
     [int]$MaxAgeHours = 26,
-    [string]$LogFile
+    [string]$LogFile,
+    [switch]$ValidateScheduledTask
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+    $ConfigPath = Join-Path $PSScriptRoot 'backup.config.json'
+}
+
+function Load-Config([string]$Path) {
+    if (-not (Test-Path $Path)) {
+        throw "Arquivo de configuração não encontrado em '$Path'."
+    }
+
+    $raw = Get-Content -Path $Path -Raw
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        throw "Arquivo de configuração vazio: '$Path'."
+    }
+
+    return $raw | ConvertFrom-Json
+}
+
+$config = Load-Config -Path $ConfigPath
+
+if ([string]::IsNullOrWhiteSpace($BackupDir)) {
+    if ([string]::IsNullOrWhiteSpace($config.backupRoot)) {
+        throw 'Defina backupRoot no backup.config.json ou informe -BackupDir.'
+    }
+
+    $BackupDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($config.backupRoot)
+}
 
 if ([string]::IsNullOrWhiteSpace($LogFile)) {
     $LogFile = Join-Path $BackupDir 'backup-health.log'
@@ -17,18 +46,20 @@ $timestamp = Get-Date
 $messages = New-Object System.Collections.Generic.List[string]
 $healthy = $true
 
-try {
-    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
-    $info = Get-ScheduledTaskInfo -TaskName $TaskName -ErrorAction Stop
+if ($ValidateScheduledTask) {
+    try {
+        $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+        $info = Get-ScheduledTaskInfo -TaskName $TaskName -ErrorAction Stop
 
-    if ($info.LastTaskResult -ne 0) {
-        $healthy = $false
-        $messages.Add("LastTaskResult diferente de 0: $($info.LastTaskResult)")
+        if ($info.LastTaskResult -ne 0) {
+            $healthy = $false
+            $messages.Add("LastTaskResult diferente de 0: $($info.LastTaskResult)")
+        }
     }
-}
-catch {
-    $healthy = $false
-    $messages.Add("Tarefa não encontrada ou inacessível: $TaskName")
+    catch {
+        $healthy = $false
+        $messages.Add("Tarefa não encontrada ou inacessível: $TaskName")
+    }
 }
 
 $latestBackup = $null

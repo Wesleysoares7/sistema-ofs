@@ -99,7 +99,13 @@ function Copy-RestoredItem([string]$ExtractRoot, [string]$RelativePath, [string]
     }
 
     if ((Get-Item $source).PSIsContainer) {
-        Copy-Item -Path $source -Destination $destination -Recurse -Force
+        if (-not (Test-Path $destination)) {
+            New-Item -ItemType Directory -Path $destination -Force | Out-Null
+        }
+
+        Get-ChildItem -Path $source -Force | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $destination -Recurse -Force
+        }
     }
     else {
         Copy-Item -Path $source -Destination $destination -Force

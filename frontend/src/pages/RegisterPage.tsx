@@ -4,7 +4,6 @@ import { useAuth } from "../hooks/useAuth.js";
 import { Button, Card } from "../components/Common.js";
 import { Toast, useToast } from "../components/Toast.js";
 import { imageToBase64, isValidImageFile } from "../utils/imageHelper.js";
-import { logger } from "../utils/logger.js";
 import { api } from "../services/api.js";
 import { Fraternidade } from "../types/index.js";
 
@@ -153,14 +152,6 @@ export const RegisterPage: React.FC = () => {
           cep: formData.cep,
         },
       };
-
-      logger.debug("Enviando cadastro com dados:", {
-        ...payload,
-        fotoBase64: payload.fotoBase64
-          ? `[${payload.fotoBase64.length} chars]`
-          : undefined,
-        senha: "[PROTEGIDA]",
-      });
 
       await register(payload);
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { AdminLayout } from "../components/Layout.js";
 import { Card, Button } from "../components/Common.js";
 import { api } from "../services/api.js";
@@ -39,11 +39,7 @@ export const AdminConfigPage: React.FC = () => {
     useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -101,7 +97,11 @@ export const AdminConfigPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isLocalAdmin]);
+
+  useEffect(() => {
+    void loadConfig();
+  }, [loadConfig]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

@@ -150,7 +150,7 @@ export class AuthService {
       throw createError(401, "Email ou senha inválidos");
     }
 
-    if (user.status !== "ATIVO" && !isAdminRole(user.role)) {
+    if (user.status !== "ATIVO") {
       throw createError(
         403,
         "Sua conta não está ativa. Entre em contato com o administrador.",
