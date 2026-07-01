@@ -5,6 +5,12 @@ export interface JwtPayload {
   email: string;
   role: string;
   status: string;
+  fraternidadeId?: string | null;
+}
+
+export interface BadgeTokenPayload {
+  type: "badge";
+  userId: string;
 }
 
 export function generateToken(payload: JwtPayload): string {
@@ -31,4 +37,26 @@ export function decodeToken(token: string): JwtPayload | null {
   } catch {
     return null;
   }
+}
+
+export function generateBadgeToken(userId: string): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET não configurado");
+  }
+
+  return jwt.sign(
+    {
+      type: "badge",
+      userId,
+    } satisfies BadgeTokenPayload,
+    secret,
+    {
+      expiresIn: "90d",
+    },
+  );
+}
+
+export function verifyBadgeToken(token: string): BadgeTokenPayload {
+  return jwt.verify(token, process.env.JWT_SECRET!) as BadgeTokenPayload;
 }

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
+import { logger } from "../utils/logger.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -34,7 +35,7 @@ export function logRequests(req: Request, res: Response, next: NextFunction) {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    console.log(
+    logger.debug(
       `${new Date().toISOString()} | ${req.method} ${req.path} | ${res.statusCode} | ${duration}ms`,
     );
   });

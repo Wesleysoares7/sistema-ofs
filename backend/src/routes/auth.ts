@@ -30,6 +30,12 @@ router.post(
 // Perfil - com autenticação
 router.get("/profile", authenticate, AuthController.getProfile);
 
+// Crachá do membro autenticado
+router.get("/badge", authenticate, requireActive, AuthController.getBadge);
+
+// Validação pública de crachá
+router.get("/badge/verify/:token", AuthController.verifyBadge);
+
 // Atualizar perfil - com autenticação
 router.put(
   "/profile",

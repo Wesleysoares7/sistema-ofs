@@ -8,7 +8,9 @@ import userRoutes from "./routes/users.js";
 import contribuicaoRoutes from "./routes/contribuicoes.js";
 import configRoutes from "./routes/config.js";
 import avisoRoutes from "./routes/avisos.js";
+import fraternidadeRoutes from "./routes/fraternidades.js";
 import { authenticate } from "./middlewares/auth.js";
+import { logger } from "./utils/logger.js";
 import {
   errorHandler,
   notFoundHandler,
@@ -58,6 +60,7 @@ app.use("/api/config", configRoutes);
 app.use("/api/avisos", avisoRoutes);
 app.use("/api/users", authenticate, userRoutes);
 app.use("/api/contribuicoes", authenticate, contribuicaoRoutes);
+app.use("/api/fraternidades", fraternidadeRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -72,10 +75,10 @@ app.use(errorHandler);
 
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`✅ Servidor rodando na porta ${PORT}`);
-  console.log(`🌍 Ambiente: ${process.env.NODE_ENV || "development"}`);
+  logger.info(`Servidor rodando na porta ${PORT}`);
+  logger.info(`Ambiente: ${process.env.NODE_ENV || "development"}`);
   if (sentryDsn) {
-    console.log("🛡️ Sentry monitoramento: ativo");
+    logger.info("Sentry monitoramento: ativo");
   }
 });
 

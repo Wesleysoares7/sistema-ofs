@@ -4,13 +4,7 @@ import { AuthService, UserService } from "../services/UserService.js";
 export class AuthController {
   static async register(req: Request, res: Response) {
     try {
-      console.log("📝 Registrando novo usuário:", {
-        nome: req.body.nome,
-        email: req.body.email,
-        cpf: req.body.cpf,
-      });
       const result = await AuthService.register(req.body);
-      console.log("✅ Usuário registrado com sucesso:", result.id);
       res.status(201).json(result);
     } catch (err: any) {
       console.error("❌ Erro ao registrar:", err.message);
@@ -45,15 +39,46 @@ export class AuthController {
       res.status(err.statusCode || 500).json({ error: err.message });
     }
   }
+
+  static async getBadge(req: Request, res: Response) {
+    try {
+      const result = await AuthService.getBadgeData(req.userId!);
+      res.status(200).json(result);
+    } catch (err: any) {
+      res.status(err.statusCode || 500).json({ error: err.message });
+    }
+  }
+
+  static async verifyBadge(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+      const result = await AuthService.verifyBadgeData(token);
+      res.status(200).json(result);
+    } catch (err: any) {
+      res.status(err.statusCode || 500).json({ error: err.message });
+    }
+  }
 }
 
 export class UserController {
+  private static buildScope(req: Request) {
+    return {
+      userId: req.userId!,
+      role: req.userRole || "",
+      fraternidadeId: req.userFraternidadeId ?? null,
+    };
+  }
+
   static async getAllUsers(req: Request, res: Response) {
     try {
       const skip = parseInt(req.query.skip as string) || 0;
       const take = parseInt(req.query.take as string) || 10;
 
-      const result = await UserService.getAllUsers(skip, take);
+      const result = await UserService.getAllUsers(
+        skip,
+        take,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -66,7 +91,12 @@ export class UserController {
       const skip = parseInt(req.query.skip as string) || 0;
       const take = parseInt(req.query.take as string) || 10;
 
-      const result = await UserService.getUsersByStatus(status, skip, take);
+      const result = await UserService.getUsersByStatus(
+        status,
+        skip,
+        take,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -79,7 +109,12 @@ export class UserController {
       const skip = parseInt(req.query.skip as string) || 0;
       const take = parseInt(req.query.take as string) || 10;
 
-      const result = await UserService.getUsersByTipo(tipoMembro, skip, take);
+      const result = await UserService.getUsersByTipo(
+        tipoMembro,
+        skip,
+        take,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -91,7 +126,11 @@ export class UserController {
       const skip = parseInt(req.query.skip as string) || 0;
       const take = parseInt(req.query.take as string) || 1000;
 
-      const result = await UserService.getAllUsersDetailed(skip, take);
+      const result = await UserService.getAllUsersDetailed(
+        skip,
+        take,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -101,7 +140,10 @@ export class UserController {
   static async getUserDetail(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await UserService.getUserDetail(id);
+      const result = await UserService.getUserDetail(
+        id,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -111,9 +153,11 @@ export class UserController {
   static async approveMember(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      console.log("✅ Aprovando membro:", id, "com dados:", req.body);
-      const result = await UserService.approveMember(id, req.body);
-      console.log("✅ Membro aprovado com sucesso:", result.id);
+      const result = await UserService.approveMember(
+        id,
+        req.body,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       console.error("❌ Erro ao aprovar membro:", err.message);
@@ -125,7 +169,11 @@ export class UserController {
   static async changeUserStatus(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await UserService.changeUserStatus(id, req.body);
+      const result = await UserService.changeUserStatus(
+        id,
+        req.body,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -135,7 +183,11 @@ export class UserController {
   static async setTipoMembro(req: Request, res: Response) {
     try {
       const { id, tipoMembro } = req.params;
-      const result = await UserService.setTipoMembro(id, tipoMembro);
+      const result = await UserService.setTipoMembro(
+        id,
+        tipoMembro,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -145,7 +197,11 @@ export class UserController {
   static async updateUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await UserService.updateUser(id, req.body);
+      const result = await UserService.updateUser(
+        id,
+        req.body,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -155,7 +211,10 @@ export class UserController {
   static async deleteUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await UserService.deleteUser(id);
+      const result = await UserService.deleteUser(
+        id,
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });
@@ -164,7 +223,9 @@ export class UserController {
 
   static async getDashboardStats(req: Request, res: Response) {
     try {
-      const result = await UserService.getDashboardStats();
+      const result = await UserService.getDashboardStats(
+        UserController.buildScope(req),
+      );
       res.status(200).json(result);
     } catch (err: any) {
       res.status(err.statusCode || 500).json({ error: err.message });

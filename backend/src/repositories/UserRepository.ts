@@ -1,10 +1,26 @@
 import { prisma } from "../utils/prisma.js";
 
+interface UserFilter {
+  fraternidadeId?: string;
+  userId?: string;
+}
+
+function buildWhere(filter?: UserFilter) {
+  if (!filter) return {};
+
+  const where: any = {};
+  if (filter.fraternidadeId) {
+    where.fraternidadeId = filter.fraternidadeId;
+  }
+  if (filter.userId) where.id = filter.userId;
+  return where;
+}
+
 export class UserRepository {
   static async findById(id: string) {
     return prisma.user.findUnique({
       where: { id },
-      include: { endereco: true },
+      include: { endereco: true, fraternidade: true },
     });
   }
 
@@ -20,47 +36,78 @@ export class UserRepository {
     });
   }
 
-  static async findAll(skip = 0, take = 10) {
+  static async findAll(skip = 0, take = 10, filter?: UserFilter) {
     return prisma.user.findMany({
+      where: buildWhere(filter),
       skip,
       take,
-      include: { endereco: true },
+      include: { endereco: true, fraternidade: true },
       orderBy: { createdAt: "desc" },
     });
   }
 
-  static async findByStatus(status: string, skip = 0, take = 10) {
+  static async findByStatus(
+    status: string,
+    skip = 0,
+    take = 10,
+    filter?: UserFilter,
+  ) {
+    const where: any = {
+      ...buildWhere(filter),
+      status,
+    };
+
     return prisma.user.findMany({
-      where: { status },
+      where,
       skip,
       take,
-      include: { endereco: true },
+      include: { endereco: true, fraternidade: true },
       orderBy: { createdAt: "desc" },
     });
   }
 
-  static async findByTipoMembro(tipoMembro: string, skip = 0, take = 10) {
+  static async findByTipoMembro(
+    tipoMembro: string,
+    skip = 0,
+    take = 10,
+    filter?: UserFilter,
+  ) {
+    const where: any = {
+      ...buildWhere(filter),
+      tipoMembro,
+    };
+
     return prisma.user.findMany({
-      where: { tipoMembro },
+      where,
       skip,
       take,
-      include: { endereco: true },
+      include: { endereco: true, fraternidade: true },
       orderBy: { createdAt: "desc" },
     });
   }
 
-  static async countByStatus(status: string) {
-    return prisma.user.count({ where: { status } });
+  static async countByStatus(status: string, filter?: UserFilter) {
+    return prisma.user.count({
+      where: {
+        ...buildWhere(filter),
+        status,
+      },
+    });
   }
 
-  static async countByRole(role: string) {
-    return prisma.user.count({ where: { role } });
+  static async countByRole(role: string, filter?: UserFilter) {
+    return prisma.user.count({
+      where: {
+        ...buildWhere(filter),
+        role,
+      },
+    });
   }
 
   static async create(data: any) {
     return prisma.user.create({
       data,
-      include: { endereco: true },
+      include: { endereco: true, fraternidade: true },
     });
   }
 
@@ -68,7 +115,7 @@ export class UserRepository {
     return prisma.user.update({
       where: { id },
       data,
-      include: { endereco: true },
+      include: { endereco: true, fraternidade: true },
     });
   }
 
