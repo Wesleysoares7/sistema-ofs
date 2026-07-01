@@ -84,7 +84,24 @@ function Resolve-CommandPath([string]$ConfiguredPath, [string]$CommandName) {
     return $command.Source
 }
 
+function Resolve-SafeRelativePath([string]$RelativePath) {
+    if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+        return $null
+    }
+
+    if ([System.IO.Path]::IsPathRooted($RelativePath) -or $RelativePath -match '(^|[\\/])\.\.([\\/]|$)') {
+        throw "Caminho inválido para restauração (somente caminhos relativos ao projeto são permitidos): $RelativePath"
+    }
+
+    return $RelativePath
+}
+
 function Copy-RestoredItem([string]$ExtractRoot, [string]$RelativePath, [string]$ProjectRoot) {
+    $RelativePath = Resolve-SafeRelativePath -RelativePath $RelativePath
+    if (-not $RelativePath) {
+        return
+    }
+
     $source = Join-Path $ExtractRoot (Join-Path 'files' $RelativePath)
     if (-not (Test-Path $source)) {
         Write-Info "Não encontrado no backup: $RelativePath"
