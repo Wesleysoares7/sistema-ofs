@@ -4,8 +4,15 @@ import bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = "admin@ofs.com";
-  const senhaPlana = "Admin@123456";
+  const email = process.env.ADMIN_REGIONAL_EMAIL || "admin@ofs.com";
+  const senhaPlana = process.env.ADMIN_REGIONAL_PASSWORD;
+
+  if (!senhaPlana) {
+    throw new Error(
+      "Defina ADMIN_REGIONAL_PASSWORD para criar/atualizar o admin regional.",
+    );
+  }
+
   const senhaHash = await bcrypt.hash(senhaPlana, 10);
 
   const existente = await prisma.user.findUnique({ where: { email } });
