@@ -17,7 +17,9 @@ if "%BACKUP_FILE%"=="" (
   exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\backup\Restore-OFSBackup.ps1" -BackupFile "%BACKUP_FILE%"
+set "OFS_BACKUP_FILE=%BACKUP_FILE%"
+powershell -NoProfile -ExecutionPolicy RemoteSigned -Command "& '.\scripts\backup\Restore-OFSBackup.ps1' -BackupFile $env:OFS_BACKUP_FILE"
+set "OFS_BACKUP_FILE="
 if errorlevel 1 (
   echo.
   echo Falha ao restaurar backup.

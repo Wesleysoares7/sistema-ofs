@@ -10,7 +10,7 @@ if not exist "scripts\backup\backup.config.json" (
   exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\backup\New-OFSBackup.ps1"
+powershell -NoProfile -ExecutionPolicy RemoteSigned -File ".\scripts\backup\New-OFSBackup.ps1"
 if errorlevel 1 (
   echo.
   echo Falha ao executar backup.

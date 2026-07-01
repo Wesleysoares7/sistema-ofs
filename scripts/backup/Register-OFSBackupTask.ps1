@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$TaskName = 'OFS-Daily-Backup',
-    [string]$Time = '02:00',
+    [string]$Time = '10:00',
     [string]$ConfigPath
 )
 
@@ -22,9 +22,9 @@ if (-not (Test-Path $backupScript)) {
 }
 
 $startTime = [DateTime]::ParseExact($Time, 'HH:mm', $null)
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$backupScript`" -ConfigPath `"$ConfigPath`""
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy RemoteSigned -File `"$backupScript`" -ConfigPath `"$ConfigPath`""
 $trigger = New-ScheduledTaskTrigger -Daily -At $startTime
-$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
+$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null

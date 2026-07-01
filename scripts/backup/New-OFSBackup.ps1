@@ -37,20 +37,35 @@ function Load-Config([string]$Path) {
     return $raw | ConvertFrom-Json
 }
 
+function Parse-EnvValue([string]$RawValue) {
+    $value = $RawValue.Trim()
+
+    if ($value -match '^"(?<v>.*)"\s*(?:#.*)?$') {
+        return $Matches.v
+    }
+
+    if ($value -match "^'(?<v>.*)'\s*(?:#.*)?$") {
+        return $Matches.v
+    }
+
+    return ($value -replace '\s+#.*$', '').Trim()
+}
+
 function Read-DatabaseUrlFromEnv([string]$ProjectRoot) {
     $envFile = Join-Path $ProjectRoot 'backend/.env'
     if (-not (Test-Path $envFile)) {
         return $null
     }
 
-    $line = Get-Content $envFile | Where-Object { $_ -match '^DATABASE_URL\s*=' } | Select-Object -First 1
+    $line = Get-Content $envFile | Where-Object {
+        $_ -match '^\s*(?:export\s+)?DATABASE_URL\s*=' -and $_ -notmatch '^\s*#'
+    } | Select-Object -First 1
     if (-not $line) {
         return $null
     }
 
-    $value = ($line -replace '^DATABASE_URL\s*=\s*', '').Trim()
-    $value = $value.Trim('"')
-    return $value
+    $rawValue = ($line -replace '^\s*(?:export\s+)?DATABASE_URL\s*=\s*', '')
+    return Parse-EnvValue -RawValue $rawValue
 }
 
 function Resolve-CommandPath([string]$ConfiguredPath, [string]$CommandName) {
@@ -118,51 +133,56 @@ $databaseDir = Join-Path $tempRoot 'database'
 $filesDir = Join-Path $tempRoot 'files'
 $manifestPath = Join-Path $tempRoot 'manifest.json'
 
-New-Item -ItemType Directory -Path $databaseDir -Force | Out-Null
-New-Item -ItemType Directory -Path $filesDir -Force | Out-Null
+try {
+    New-Item -ItemType Directory -Path $databaseDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $filesDir -Force | Out-Null
 
-$dumpPath = Join-Path $databaseDir 'ofs.dump'
-$zipPath = Join-Path $backupRoot "ofs-backup-$timestamp.zip"
+    $dumpPath = Join-Path $databaseDir 'ofs.dump'
+    $zipPath = Join-Path $backupRoot "ofs-backup-$timestamp.zip"
 
-Write-Info 'Gerando dump do PostgreSQL...'
-& $pgDump "--dbname=$databaseUrl" '--format=custom' "--file=$dumpPath" '--no-owner' '--no-privileges' '--verbose'
-if ($LASTEXITCODE -ne 0) {
-    throw "pg_dump falhou com código $LASTEXITCODE"
+    Write-Info 'Gerando dump do PostgreSQL...'
+    & $pgDump "--dbname=$databaseUrl" '--format=custom' "--file=$dumpPath" '--no-owner' '--no-privileges' '--verbose'
+    if ($LASTEXITCODE -ne 0) {
+        throw "pg_dump falhou com código $LASTEXITCODE"
+    }
+    Write-Success "Dump gerado: $dumpPath"
+
+    foreach ($item in @($config.includeEnvFiles)) {
+        if (-not [string]::IsNullOrWhiteSpace($item)) {
+            Copy-RelativeItem -ProjectRoot $projectRoot -RelativePath $item -DestinationRoot $filesDir
+        }
+    }
+
+    foreach ($item in @($config.includePaths)) {
+        if (-not [string]::IsNullOrWhiteSpace($item)) {
+            Copy-RelativeItem -ProjectRoot $projectRoot -RelativePath $item -DestinationRoot $filesDir
+        }
+    }
+
+    $manifest = [PSCustomObject]@{
+        generatedAt = (Get-Date).ToString('o')
+        machineName = $env:COMPUTERNAME
+        projectRoot = $projectRoot
+        backupVersion = 1
+        database = [PSCustomObject]@{
+            format = 'pg_dump custom'
+            file = 'database/ofs.dump'
+        }
+        includedFiles = @($config.includeEnvFiles)
+        includedPaths = @($config.includePaths)
+    }
+
+    $manifest | ConvertTo-Json -Depth 6 | Set-Content -Path $manifestPath -Encoding UTF8
+
+    Write-Info 'Compactando backup...'
+    Compress-Archive -Path (Join-Path $tempRoot '*') -DestinationPath $zipPath -CompressionLevel Optimal -Force
+    Write-Success "Backup criado: $zipPath"
 }
-Write-Success "Dump gerado: $dumpPath"
-
-foreach ($item in @($config.includeEnvFiles)) {
-    if (-not [string]::IsNullOrWhiteSpace($item)) {
-        Copy-RelativeItem -ProjectRoot $projectRoot -RelativePath $item -DestinationRoot $filesDir
+finally {
+    if (Test-Path $tempRoot) {
+        Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
-
-foreach ($item in @($config.includePaths)) {
-    if (-not [string]::IsNullOrWhiteSpace($item)) {
-        Copy-RelativeItem -ProjectRoot $projectRoot -RelativePath $item -DestinationRoot $filesDir
-    }
-}
-
-$manifest = [PSCustomObject]@{
-    generatedAt = (Get-Date).ToString('o')
-    machineName = $env:COMPUTERNAME
-    projectRoot = $projectRoot
-    backupVersion = 1
-    database = [PSCustomObject]@{
-        format = 'pg_dump custom'
-        file = 'database/ofs.dump'
-    }
-    includedFiles = @($config.includeEnvFiles)
-    includedPaths = @($config.includePaths)
-}
-
-$manifest | ConvertTo-Json -Depth 6 | Set-Content -Path $manifestPath -Encoding UTF8
-
-Write-Info 'Compactando backup...'
-Compress-Archive -Path (Join-Path $tempRoot '*') -DestinationPath $zipPath -CompressionLevel Optimal -Force
-Write-Success "Backup criado: $zipPath"
-
-Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 if (-not $SkipRetention) {
     $retentionDays = [int]($config.retentionDays)

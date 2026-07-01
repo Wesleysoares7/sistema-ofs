@@ -5,7 +5,7 @@ Este projeto inclui scripts para executar backup local no seu computador, manten
 ## O que é salvo
 
 - Banco PostgreSQL (`pg_dump` em formato custom)
-- Arquivos de ambiente configurados em `includeEnvFiles` (por padrão: `backend/.env` e `frontend/.env`)
+- Arquivos de ambiente configurados em `includeEnvFiles` (opcional)
 - Pastas opcionais configuradas em `includePaths`
 
 ## Pré-requisitos
@@ -23,6 +23,7 @@ Este projeto inclui scripts para executar backup local no seu computador, manten
    - `databaseUrl`: opcional. Se vazio, o script tenta ler `DATABASE_URL` de `backend/.env`
    - `pgDumpPath` e `pgRestorePath`: opcionais. Preencha apenas se os comandos não estiverem no `PATH`
    - `retentionDays`: dias para manter backups antigos
+   - `includeEnvFiles`: por padrão é vazio. Inclua `.env` apenas se você realmente precisar e proteger os arquivos de backup
    - `includePaths`: caminhos extras do projeto para backup (ex.: `backend/uploads`)
 
 ## 2) Executar backup manual
@@ -30,13 +31,13 @@ Este projeto inclui scripts para executar backup local no seu computador, manten
 No PowerShell, na raiz do projeto:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\backup\New-OFSBackup.ps1
+powershell -ExecutionPolicy RemoteSigned -File .\scripts\backup\New-OFSBackup.ps1
 ```
 
 Com config custom:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\backup\New-OFSBackup.ps1 -ConfigPath .\scripts\backup\backup.config.json
+powershell -ExecutionPolicy RemoteSigned -File .\scripts\backup\New-OFSBackup.ps1 -ConfigPath .\scripts\backup\backup.config.json
 ```
 
 Saída: um arquivo `ofs-backup-AAAAMMDD-HHMMSS.zip` em `backupRoot`.
@@ -76,7 +77,7 @@ Log de monitoramento: `C:\OFS\backups\backup-health.log`
 No PowerShell (executar como Administrador):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\backup\Register-OFSBackupTask.ps1 -Time 10:00
+powershell -ExecutionPolicy RemoteSigned -File .\scripts\backup\Register-OFSBackupTask.ps1 -Time 10:00
 ```
 
 Isso cria a tarefa `OFS-Daily-Backup` para rodar todo dia às 10:00.
@@ -86,20 +87,22 @@ Isso cria a tarefa `OFS-Daily-Backup` para rodar todo dia às 10:00.
 ### Restaurar somente banco
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\backup\Restore-OFSBackup.ps1 -BackupFile "C:\\OFS\\backups\\ofs-backup-20260220-020000.zip"
+powershell -ExecutionPolicy RemoteSigned -File .\scripts\backup\Restore-OFSBackup.ps1 -BackupFile "C:\\OFS\\backups\\ofs-backup-20260220-020000.zip"
 ```
 
 ### Restaurar também arquivos extras (`includePaths`)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\backup\Restore-OFSBackup.ps1 -BackupFile "C:\\OFS\\backups\\ofs-backup-20260220-020000.zip" -RestoreFiles
+powershell -ExecutionPolicy RemoteSigned -File .\scripts\backup\Restore-OFSBackup.ps1 -BackupFile "C:\\OFS\\backups\\ofs-backup-20260220-020000.zip" -RestoreFiles
 ```
 
 ### Restaurar também `.env`
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\backup\Restore-OFSBackup.ps1 -BackupFile "C:\\OFS\\backups\\ofs-backup-20260220-020000.zip" -RestoreEnvFiles
+powershell -ExecutionPolicy RemoteSigned -File .\scripts\backup\Restore-OFSBackup.ps1 -BackupFile "C:\\OFS\\backups\\ofs-backup-20260220-020000.zip" -RestoreEnvFiles
 ```
+
+> A restauração pede confirmação explícita (`RESTAURAR`) antes de executar `pg_restore --clean`.
 
 ## Frequência recomendada
 

@@ -4,9 +4,6 @@
   "pgDumpPath": "",
   "pgRestorePath": "",
   "retentionDays": 30,
-  "includeEnvFiles": [
-    "backend/.env",
-    "frontend/.env"
-  ],
+  "includeEnvFiles": [],
   "includePaths": []
 }

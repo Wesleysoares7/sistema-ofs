@@ -47,7 +47,8 @@ else {
         $ageHours = ($timestamp - $latestBackup.LastWriteTime).TotalHours
         if ($ageHours -gt $MaxAgeHours) {
             $healthy = $false
-            $messages.Add("Último backup está antigo (${ageHours:N1}h): $($latestBackup.Name)")
+            $formattedAge = '{0:N1}' -f $ageHours
+            $messages.Add("Último backup está antigo (${formattedAge}h): $($latestBackup.Name)")
         }
     }
 }

@@ -4,7 +4,8 @@ param(
     [string]$BackupFile,
     [string]$ConfigPath,
     [switch]$RestoreFiles,
-    [switch]$RestoreEnvFiles
+    [switch]$RestoreEnvFiles,
+    [switch]$Force
 )
 
 Set-StrictMode -Version Latest
@@ -39,20 +40,35 @@ function Load-Config([string]$Path) {
     return $raw | ConvertFrom-Json
 }
 
+function Parse-EnvValue([string]$RawValue) {
+    $value = $RawValue.Trim()
+
+    if ($value -match '^"(?<v>.*)"\s*(?:#.*)?$') {
+        return $Matches.v
+    }
+
+    if ($value -match "^'(?<v>.*)'\s*(?:#.*)?$") {
+        return $Matches.v
+    }
+
+    return ($value -replace '\s+#.*$', '').Trim()
+}
+
 function Read-DatabaseUrlFromEnv([string]$ProjectRoot) {
     $envFile = Join-Path $ProjectRoot 'backend/.env'
     if (-not (Test-Path $envFile)) {
         return $null
     }
 
-    $line = Get-Content $envFile | Where-Object { $_ -match '^DATABASE_URL\s*=' } | Select-Object -First 1
+    $line = Get-Content $envFile | Where-Object {
+        $_ -match '^\s*(?:export\s+)?DATABASE_URL\s*=' -and $_ -notmatch '^\s*#'
+    } | Select-Object -First 1
     if (-not $line) {
         return $null
     }
 
-    $value = ($line -replace '^DATABASE_URL\s*=\s*', '').Trim()
-    $value = $value.Trim('"')
-    return $value
+    $rawValue = ($line -replace '^\s*(?:export\s+)?DATABASE_URL\s*=\s*', '')
+    return Parse-EnvValue -RawValue $rawValue
 }
 
 function Resolve-CommandPath([string]$ConfiguredPath, [string]$CommandName) {
@@ -112,38 +128,52 @@ $pgRestore = Resolve-CommandPath -ConfiguredPath $config.pgRestorePath -CommandN
 
 $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $extractRoot = Join-Path $env:TEMP "ofs-restore-$timestamp"
-New-Item -ItemType Directory -Path $extractRoot -Force | Out-Null
-
-Write-Info 'Descompactando backup...'
-Expand-Archive -Path $BackupFile -DestinationPath $extractRoot -Force
-
-$dumpPath = Join-Path $extractRoot 'database/ofs.dump'
-if (-not (Test-Path $dumpPath)) {
-    throw "Dump não encontrado no backup: $dumpPath"
-}
-
-Write-Info 'Restaurando banco PostgreSQL...'
-& $pgRestore "--dbname=$databaseUrl" '--clean' '--if-exists' '--no-owner' '--no-privileges' '--verbose' $dumpPath
-if ($LASTEXITCODE -ne 0) {
-    throw "pg_restore falhou com código $LASTEXITCODE"
-}
-Write-Success 'Banco restaurado com sucesso.'
-
-if ($RestoreFiles) {
-    foreach ($item in @($config.includePaths)) {
-        if (-not [string]::IsNullOrWhiteSpace($item)) {
-            Copy-RestoredItem -ExtractRoot $extractRoot -RelativePath $item -ProjectRoot $projectRoot
-        }
+if (-not $Force) {
+    Write-Host "ATENÇÃO: esta operação remove objetos existentes no banco antes de restaurar (--clean)." -ForegroundColor Yellow
+    $confirmation = Read-Host "Digite RESTAURAR para continuar"
+    if ($confirmation -ne 'RESTAURAR') {
+        throw 'Restauração cancelada pelo usuário.'
     }
 }
 
-if ($RestoreEnvFiles) {
-    foreach ($item in @($config.includeEnvFiles)) {
-        if (-not [string]::IsNullOrWhiteSpace($item)) {
-            Copy-RestoredItem -ExtractRoot $extractRoot -RelativePath $item -ProjectRoot $projectRoot
+try {
+    New-Item -ItemType Directory -Path $extractRoot -Force | Out-Null
+
+    Write-Info 'Descompactando backup...'
+    Expand-Archive -Path $BackupFile -DestinationPath $extractRoot -Force
+
+    $dumpPath = Join-Path $extractRoot 'database/ofs.dump'
+    if (-not (Test-Path $dumpPath)) {
+        throw "Dump não encontrado no backup: $dumpPath"
+    }
+
+    Write-Info 'Restaurando banco PostgreSQL...'
+    & $pgRestore "--dbname=$databaseUrl" '--clean' '--if-exists' '--no-owner' '--no-privileges' '--verbose' $dumpPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "pg_restore falhou com código $LASTEXITCODE"
+    }
+    Write-Success 'Banco restaurado com sucesso.'
+
+    if ($RestoreFiles) {
+        foreach ($item in @($config.includePaths)) {
+            if (-not [string]::IsNullOrWhiteSpace($item)) {
+                Copy-RestoredItem -ExtractRoot $extractRoot -RelativePath $item -ProjectRoot $projectRoot
+            }
+        }
+    }
+
+    if ($RestoreEnvFiles) {
+        foreach ($item in @($config.includeEnvFiles)) {
+            if (-not [string]::IsNullOrWhiteSpace($item)) {
+                Copy-RestoredItem -ExtractRoot $extractRoot -RelativePath $item -ProjectRoot $projectRoot
+            }
         }
     }
 }
+finally {
+    if (Test-Path $extractRoot) {
+        Remove-Item -Path $extractRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 
-Remove-Item -Path $extractRoot -Recurse -Force -ErrorAction SilentlyContinue
 Write-Success 'Rotina de restauração finalizada.'

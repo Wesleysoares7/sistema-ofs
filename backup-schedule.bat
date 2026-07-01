@@ -10,7 +10,7 @@ if not exist "scripts\backup\backup.config.json" (
   exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\backup\Register-OFSBackupTask.ps1" -Time 10:00
+powershell -NoProfile -ExecutionPolicy RemoteSigned -File ".\scripts\backup\Register-OFSBackupTask.ps1" -Time 10:00
 if errorlevel 1 (
   echo.
   echo Falha ao registrar tarefa agendada.
