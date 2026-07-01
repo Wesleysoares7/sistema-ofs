@@ -26,7 +26,6 @@ async function main() {
         {
           action: "updated",
           email,
-          senha: senhaPlana,
         },
         null,
         2,
@@ -64,7 +63,6 @@ async function main() {
         action: "created",
         id: created.id,
         email,
-        senha: senhaPlana,
       },
       null,
       2,
