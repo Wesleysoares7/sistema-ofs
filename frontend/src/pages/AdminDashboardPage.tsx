@@ -213,7 +213,7 @@ export const AdminDashboardPage: React.FC = () => {
       setLoadingMembers(true);
       const response = await api.get<User[]>("/users");
       const onlyMembers = response.data.filter(
-        (user) => user.role === "MEMBER",
+        (user) => user.role === "MEMBER" || user.role === "IRMAO_MEMBRO",
       );
       setMembers(onlyMembers);
     } catch (error) {
@@ -320,45 +320,55 @@ export const AdminDashboardPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Dashboard Administrativo
-          </h1>
-          <p className="text-gray-600 mt-2">Resumo geral do sistema OFS</p>
+        <div className="surface-panel rounded-3xl p-6 md:p-8 border border-white/70 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-sm font-semibold text-primary-700">
+                <span>📊</span>
+                Painel regional
+              </div>
+              <h1 className="mt-4 text-3xl md:text-4xl font-extrabold text-gray-900">
+                Dashboard Administrativo
+              </h1>
+              <p className="text-gray-600 mt-2 max-w-2xl">
+                Resumo geral do sistema OFS com uma interface mais clara, moderna e vibrante.
+              </p>
+            </div>
+          </div>
         </div>
 
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card className="text-center">
-              <div className="text-4xl font-bold text-primary-600">
+            <Card className="text-center border border-primary-100">
+              <div className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
                 {stats.totalMembers}
               </div>
               <p className="text-gray-600 text-sm mt-2">Total de Membros</p>
             </Card>
 
-            <Card className="text-center">
-              <div className="text-4xl font-bold text-green-600">
+            <Card className="text-center border border-emerald-100">
+              <div className="text-4xl font-extrabold text-emerald-600">
                 {stats.activeMembers}
               </div>
               <p className="text-gray-600 text-sm mt-2">Membros Ativos</p>
             </Card>
 
-            <Card className="text-center">
-              <div className="text-4xl font-bold text-yellow-600">
+            <Card className="text-center border border-amber-100">
+              <div className="text-4xl font-extrabold text-amber-600">
                 {stats.pendingMembers}
               </div>
               <p className="text-gray-600 text-sm mt-2">Pendentes</p>
             </Card>
 
-            <Card className="text-center">
-              <div className="text-4xl font-bold text-red-600">
+            <Card className="text-center border border-red-100">
+              <div className="text-4xl font-extrabold text-red-600">
                 {stats.inactiveMembers}
               </div>
               <p className="text-gray-600 text-sm mt-2">Inativos</p>
             </Card>
 
-            <Card className="text-center">
-              <div className="text-4xl font-bold text-purple-600">
+            <Card className="text-center border border-violet-100">
+              <div className="text-4xl font-extrabold text-violet-600">
                 {stats.totalAdmins}
               </div>
               <p className="text-gray-600 text-sm mt-2">Administradores</p>
@@ -366,16 +376,16 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         )}
 
-        <Card>
-          <h2 className="text-xl font-bold text-gray-800 mb-4">
+        <Card className="border border-primary-100">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
             Ações Rápidas
           </h2>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="primary"
-              onClick={() => navigate("/admin/membros")}
+              onClick={() => navigate("/admin/fraternidades")}
             >
-              Listar Membros
+              Cadastrar Fraternidades
             </Button>
             <Button
               variant="primary"
@@ -389,19 +399,19 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         </Card>
 
-        <Card>
-          <h2 className="text-xl font-bold text-gray-800 mb-4">
+        <Card className="border border-primary-100">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
             Avisos da Fraternidade
           </h2>
 
           {avisoError && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50/90 p-3 text-sm text-red-700">
               {avisoError}
             </div>
           )}
 
           {avisoMessage && (
-            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+            <div className="mb-4 rounded-xl border border-green-200 bg-green-50/90 p-3 text-sm text-green-700">
               {avisoMessage}
             </div>
           )}
@@ -413,14 +423,14 @@ export const AdminDashboardPage: React.FC = () => {
                 value={avisoFormData.titulo}
                 onChange={handleAvisoInputChange}
                 placeholder="Título do aviso"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full rounded-xl border border-gray-200 bg-white/90 px-3 py-3"
               />
 
               <select
                 name="tipo"
                 value={avisoFormData.tipo}
                 onChange={handleAvisoInputChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full rounded-xl border border-gray-200 bg-white/90 px-3 py-3"
               >
                 <option value="COMUNICADO">Comunicado</option>
                 <option value="EVENTO">Evento</option>
@@ -434,7 +444,7 @@ export const AdminDashboardPage: React.FC = () => {
               onChange={handleAvisoInputChange}
               placeholder="Mensagem do aviso"
               rows={3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className="w-full rounded-xl border border-gray-200 bg-white/90 px-3 py-3"
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -442,7 +452,7 @@ export const AdminDashboardPage: React.FC = () => {
                 name="publicoAlvo"
                 value={avisoFormData.publicoAlvo}
                 onChange={handleAvisoInputChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full rounded-xl border border-gray-200 bg-white/90 px-3 py-3"
               >
                 <option value="MEMBER">Somente membros</option>
                 <option value="ALL">Todos (admin e membro)</option>
@@ -453,7 +463,7 @@ export const AdminDashboardPage: React.FC = () => {
                 name="dataExpiracao"
                 value={avisoFormData.dataExpiracao}
                 onChange={handleAvisoInputChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full rounded-xl border border-gray-200 bg-white/90 px-3 py-3"
               />
             </div>
 

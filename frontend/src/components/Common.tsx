@@ -1,6 +1,6 @@
 import React from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
-import { useNavigate } from "react-router-dom";
 
 export const Button: React.FC<
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -15,14 +15,17 @@ export const Button: React.FC<
   ...props
 }) => {
   const variants = {
-    primary: "bg-primary-600 hover:bg-primary-700 text-white",
-    secondary: "bg-gray-300 hover:bg-gray-400 text-gray-800",
-    danger: "bg-red-600 hover:bg-red-700 text-white",
+    primary:
+      "bg-gradient-to-r from-primary-600 via-primary-500 to-primary-700 text-white shadow-lg shadow-primary-700/25 hover:shadow-xl hover:shadow-primary-700/30 hover:-translate-y-0.5",
+    secondary:
+      "bg-white/90 text-primary-800 border border-primary-200 shadow-sm hover:bg-primary-50 hover:border-primary-300 hover:-translate-y-0.5",
+    danger:
+      "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-600/20 hover:shadow-xl hover:shadow-red-600/30 hover:-translate-y-0.5",
   };
 
   return (
     <button
-      className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
+      className={`px-4 py-2 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${variants[variant]} ${className}`}
       disabled={loading}
       {...props}
     >
@@ -36,7 +39,7 @@ export const Card: React.FC<
     children: React.ReactNode;
   }
 > = ({ children, className = "", ...props }) => (
-  <div className={`bg-white rounded-lg shadow-md p-6 ${className}`} {...props}>
+  <div className={`surface-card rounded-2xl p-6 ${className}`} {...props}>
     {children}
   </div>
 );
@@ -47,15 +50,15 @@ export const Badge: React.FC<{
   className?: string;
 }> = ({ status, tipoMembro, className = "" }) => {
   const statusColors: Record<string, string> = {
-    ATIVO: "bg-green-100 text-green-800",
-    PENDENTE: "bg-yellow-100 text-yellow-800",
-    INATIVO: "bg-red-100 text-red-800",
-    PAGO: "bg-green-100 text-green-800",
+    ATIVO: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    PENDENTE: "bg-amber-100 text-amber-800 border-amber-200",
+    INATIVO: "bg-red-100 text-red-800 border-red-200",
+    PAGO: "bg-emerald-100 text-emerald-800 border-emerald-200",
   };
 
   return (
     <span
-      className={`px-3 py-1 rounded-full text-sm font-medium inline-block ${statusColors[status] || "bg-gray-100 text-gray-800"} ${className}`}
+      className={`px-3 py-1 rounded-full text-sm font-semibold inline-block border ${statusColors[status] || "bg-gray-100 text-gray-800 border-gray-200"} ${className}`}
     >
       {status}
       {tipoMembro && <span className="ml-2">- {tipoMembro}</span>}
@@ -66,14 +69,29 @@ export const Badge: React.FC<{
 interface PrivateRouteProps {
   children: React.ReactNode;
   requiredRole?: "ADMIN" | "MEMBER";
+  allowedRoles?: string[];
 }
+
+const isAdminRole = (role?: string) =>
+  role === "ADMIN_REGIONAL" || role === "ADMIN_LOCAL" || role === "ADMIN";
+
+const isMemberRole = (role?: string) =>
+  role === "IRMAO_MEMBRO" || role === "MEMBER" || role === "ADMIN_LOCAL";
+
+const getDefaultRouteForRole = (role?: string) => {
+  if (isAdminRole(role)) {
+    return "/admin";
+  }
+
+  return "/member/profile";
+};
 
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({
   children,
   requiredRole,
+  allowedRoles,
 }) => {
   const { isAuthenticated, user, loading } = useAuth();
-  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -84,13 +102,24 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({
   }
 
   if (!isAuthenticated) {
-    navigate("/login");
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    navigate("/");
-    return null;
+  if (requiredRole) {
+    const allowed =
+      requiredRole === "ADMIN"
+        ? isAdminRole(user?.role)
+        : isMemberRole(user?.role);
+
+    if (!allowed) {
+      return <Navigate to={getDefaultRouteForRole(user?.role)} replace />;
+    }
+  }
+
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(user?.role || "")) {
+      return <Navigate to={getDefaultRouteForRole(user?.role)} replace />;
+    }
   }
 
   if (user?.status === "PENDENTE") {

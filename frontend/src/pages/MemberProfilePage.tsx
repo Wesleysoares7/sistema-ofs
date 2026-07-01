@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MemberLayout } from "../components/Layout.js";
 import { Card, Button, Badge } from "../components/Common.js";
 import { api } from "../services/api.js";
@@ -13,6 +14,7 @@ import {
 } from "../utils/imageHelper.js";
 
 export const MemberProfilePage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,13 +137,22 @@ export const MemberProfilePage: React.FC = () => {
                 <h2 className="text-xl font-bold text-gray-800">
                   Informações Básicas
                 </h2>
-                <Button
-                  type="button"
-                  variant={editing ? "secondary" : "primary"}
-                  onClick={() => setEditing(!editing)}
-                >
-                  {editing ? "Cancelar" : "Editar"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => navigate("/member/cracha")}
+                  >
+                    Ver Crachá
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editing ? "secondary" : "primary"}
+                    onClick={() => setEditing(!editing)}
+                  >
+                    {editing ? "Cancelar" : "Editar"}
+                  </Button>
+                </div>
               </div>
 
               {/* Foto */}

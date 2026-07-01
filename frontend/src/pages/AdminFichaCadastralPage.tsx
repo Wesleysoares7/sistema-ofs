@@ -46,7 +46,8 @@ export const AdminFichaCadastralPage: React.FC = () => {
           setMembers([membersResponse.data as FichaUser]);
         } else if (mode === "all") {
           const onlyMembers = (membersResponse.data as FichaUser[]).filter(
-            (user) => user.role === "MEMBER",
+            (user) =>
+              user.role === "MEMBER" || user.role === "IRMAO_MEMBRO",
           );
           setMembers(onlyMembers);
         } else {
