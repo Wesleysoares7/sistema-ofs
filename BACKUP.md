@@ -47,7 +47,7 @@ Saída: um arquivo `ofs-backup-AAAAMMDD-HHMMSS.zip` em `backupRoot`.
 ### Opção A: clique duplo (Windows)
 
 - `backup-now.bat`: executa backup imediato
-- `backup-schedule.bat`: cria tarefa diária às 02:00
+- `backup-schedule.bat`: cria tarefa diária às 10:00
 - `backup-restore.bat`: solicita o `.zip` e executa restauração
 
 ### Opção B: comando único
