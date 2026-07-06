@@ -4,6 +4,8 @@ import { useAuth } from "../hooks/useAuth.js";
 import { Button, Card } from "../components/Common.js";
 import { Toast, useToast } from "../components/Toast.js";
 import { imageToBase64, isValidImageFile } from "../utils/imageHelper.js";
+import { api } from "../services/api.js";
+import { Fraternidade } from "../types/index.js";
 
 export const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -20,7 +22,11 @@ export const RegisterPage: React.FC = () => {
     cidade: "",
     estado: "",
     cep: "",
+    fraternidadeId: "",
   });
+
+  const [fraternidades, setFraternidades] = useState<Fraternidade[]>([]);
+  const [fraternidadesLoading, setFraternidadesLoading] = useState(false);
 
   const [fotoBase64, setFotoBase64] = useState<string | null>(null);
   const [showSenha, setShowSenha] = useState(false);
@@ -29,6 +35,22 @@ export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
   const { toast, showToast, setToast } = useToast();
+
+  React.useEffect(() => {
+    const loadFraternidades = async () => {
+      try {
+        setFraternidadesLoading(true);
+        const response = await api.get<Fraternidade[]>("/fraternidades/public");
+        setFraternidades(response.data);
+      } catch (error) {
+        console.error("Erro ao carregar fraternidades:", error);
+      } finally {
+        setFraternidadesLoading(false);
+      }
+    };
+
+    loadFraternidades();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,8 +81,36 @@ export const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const isValidCPF = (value: string) => {
+      const cpf = value.replace(/\D/g, "");
+      if (cpf.length !== 11) return false;
+      if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+      const calcDigit = (base: string, factor: number) => {
+        let total = 0;
+        for (let i = 0; i < base.length; i++) {
+          total += parseInt(base[i], 10) * (factor - i);
+        }
+        const remainder = total % 11;
+        return remainder < 2 ? 0 : 11 - remainder;
+      };
+
+      const firstDigit = calcDigit(cpf.slice(0, 9), 10);
+      const secondDigit = calcDigit(cpf.slice(0, 10), 11);
+
+      return (
+        firstDigit === parseInt(cpf[9], 10) &&
+        secondDigit === parseInt(cpf[10], 10)
+      );
+    };
+
     if (formData.senha !== formData.confirmaSenha) {
       showToast("As senhas não conferem", "error");
+      return;
+    }
+
+    if (!formData.fraternidadeId) {
+      showToast("Selecione a fraternidade local", "error");
       return;
     }
 
@@ -73,10 +123,10 @@ export const RegisterPage: React.FC = () => {
         throw new Error("Telefone deve ter no mínimo 10 dígitos");
       }
 
-      // Limpar CPF (remover hífens, pontos)
+      // CPF opcional: validar apenas quando informado
       const cpfLimpo = formData.cpf.replace(/\D/g, "");
-      if (cpfLimpo.length !== 11) {
-        throw new Error("CPF deve ter exatamente 11 dígitos");
+      if (cpfLimpo && !isValidCPF(cpfLimpo)) {
+        throw new Error("CPF inválido");
       }
 
       // Converter data para ISO datetime
@@ -86,11 +136,12 @@ export const RegisterPage: React.FC = () => {
 
       const payload = {
         nome: formData.nome,
-        cpf: cpfLimpo,
+        cpf: cpfLimpo || undefined,
         dataNascimento: dataNascimentoISO,
         telefone: telefoneLimpo,
         email: formData.email,
         senha: formData.senha,
+        fraternidadeId: formData.fraternidadeId,
         fotoBase64: fotoBase64 || undefined,
         endereco: {
           rua: formData.rua,
@@ -101,14 +152,6 @@ export const RegisterPage: React.FC = () => {
           cep: formData.cep,
         },
       };
-
-      console.log("Enviando cadastro com dados:", {
-        ...payload,
-        fotoBase64: payload.fotoBase64
-          ? `[${payload.fotoBase64.length} chars]`
-          : undefined,
-        senha: "[PROTEGIDA]",
-      });
 
       await register(payload);
 
@@ -129,7 +172,8 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-950 via-primary-800 to-primary-600 flex items-center justify-center p-4 py-8 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.16),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(255,214,153,0.14),_transparent_24%)] pointer-events-none" />
       {toast && (
         <Toast
           message={toast.message}
@@ -138,10 +182,14 @@ export const RegisterPage: React.FC = () => {
         />
       )}
 
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full max-w-3xl bg-white/88 backdrop-blur-xl border border-white/60 shadow-2xl shadow-black/10 rounded-3xl p-8 relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">🕊️</h1>
-          <h2 className="text-2xl font-bold text-gray-800">Cadastro OFS</h2>
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-sm text-primary-700 font-semibold">
+            <span>🕊️</span>
+            Cadastro OFS
+          </div>
+          <h2 className="text-3xl font-extrabold text-gray-900 mt-4">Crie seu acesso</h2>
+          <p className="text-gray-600 mt-2">Preencha seus dados e selecione a fraternidade local para análise.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -161,22 +209,21 @@ export const RegisterPage: React.FC = () => {
                   value={formData.nome}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CPF *
+                  CPF (opcional)
                 </label>
                 <input
                   type="text"
                   name="cpf"
                   value={formData.cpf}
                   onChange={handleChange}
-                  placeholder="11999999999"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  placeholder="Somente números"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -190,7 +237,7 @@ export const RegisterPage: React.FC = () => {
                   value={formData.dataNascimento}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -205,7 +252,7 @@ export const RegisterPage: React.FC = () => {
                   onChange={handleChange}
                   placeholder="(11) 98765-4321"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -219,7 +266,7 @@ export const RegisterPage: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -234,7 +281,7 @@ export const RegisterPage: React.FC = () => {
                     value={formData.senha}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                   />
                   <button
                     type="button"
@@ -282,7 +329,7 @@ export const RegisterPage: React.FC = () => {
                     value={formData.confirmaSenha}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                   />
                   <button
                     type="button"
@@ -327,7 +374,7 @@ export const RegisterPage: React.FC = () => {
               Foto de Perfil (Opcional)
             </h3>
             <div className="flex items-center gap-4">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center ring-4 ring-primary-50 shadow-lg">
                 {fotoBase64 ? (
                   <img
                     src={fotoBase64}
@@ -356,7 +403,7 @@ export const RegisterPage: React.FC = () => {
                     onChange={handleFotoChange}
                     className="hidden"
                   />
-                  <div className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer text-center font-medium transition-colors">
+                  <div className="px-4 py-3 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-700 text-white rounded-xl hover:shadow-lg cursor-pointer text-center font-semibold transition-all">
                     Selecionar Foto
                   </div>
                 </label>
@@ -364,7 +411,7 @@ export const RegisterPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleRemoveFoto}
-                    className="w-full px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                    className="w-full px-4 py-3 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-colors text-sm font-semibold"
                   >
                     Remover Foto
                   </button>
@@ -377,8 +424,47 @@ export const RegisterPage: React.FC = () => {
             </div>
           </div>
 
+            {/* Fraternidade Local */}
+            <div className="surface-panel rounded-2xl p-5 border border-primary-100">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Fraternidade Local
+              </h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fraternidade de interesse *
+                </label>
+                <select
+                  name="fraternidadeId"
+                  value={formData.fraternidadeId}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      fraternidadeId: e.target.value,
+                    }))
+                  }
+                  required
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
+                >
+                  <option value="" disabled>
+                    Selecione uma fraternidade
+                  </option>
+                  {fraternidades.map((fraternidade) => (
+                    <option key={fraternidade.id} value={fraternidade.id}>
+                      {fraternidade.nomeFraternidade} - {fraternidade.cidade} ({fraternidade.distrito})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Seu cadastro ficará pendente para análise do Administrador Local da fraternidade selecionada.
+                </p>
+                {fraternidadesLoading && (
+                  <p className="text-xs text-gray-500 mt-1">Carregando fraternidades...</p>
+                )}
+              </div>
+            </div>
+
           {/* Endereço */}
-          <div>
+          <div className="surface-panel rounded-2xl p-5 border border-primary-100">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               Endereço
             </h3>
@@ -393,7 +479,7 @@ export const RegisterPage: React.FC = () => {
                   value={formData.rua}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -407,7 +493,7 @@ export const RegisterPage: React.FC = () => {
                   value={formData.numero}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -421,7 +507,7 @@ export const RegisterPage: React.FC = () => {
                   value={formData.bairro}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -435,7 +521,7 @@ export const RegisterPage: React.FC = () => {
                   value={formData.cidade}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -451,7 +537,7 @@ export const RegisterPage: React.FC = () => {
                   placeholder="SP"
                   maxLength={2}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
 
@@ -466,18 +552,13 @@ export const RegisterPage: React.FC = () => {
                   onChange={handleChange}
                   placeholder="01310-100"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
                 />
               </div>
             </div>
           </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-            loading={loading}
-            className="w-full"
-          >
+          <Button type="submit" variant="primary" loading={loading} className="w-full py-3 text-base">
             Cadastrar
           </Button>
         </form>

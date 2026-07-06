@@ -6,10 +6,33 @@ export interface User {
   telefone: string;
   dataNascimento: string;
   fotoBase64?: string | null;
-  role: "ADMIN" | "MEMBER";
+  role:
+    | "ADMIN_REGIONAL"
+    | "ADMIN_LOCAL"
+    | "IRMAO_MEMBRO"
+    | "ADMIN"
+    | "MEMBER";
   status: "PENDENTE" | "ATIVO" | "INATIVO";
   tipoMembro?: "INICIANTE" | "FORMANDO" | "PROFESSO" | null;
+  fraternidadeId?: string | null;
+  fraternidade?: {
+    id: string;
+    nomeFraternidade: string;
+    contatoMinistro?: string | null;
+  } | null;
   endereco?: Endereco;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Fraternidade {
+  id: string;
+  nomeFraternidade: string;
+  cidade: string;
+  distrito: string;
+  dataFundacao: string;
+  status: "ATIVA" | "INATIVA";
+  contatoMinistro: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -92,6 +115,7 @@ export interface AuthResponse {
     role: string;
     status: string;
     tipoMembro?: string;
+    fraternidadeId?: string | null;
   };
 }
 
@@ -107,6 +131,7 @@ export interface RegisterRequest {
   telefone: string;
   email: string;
   senha: string;
+  fraternidadeId?: string;
   endereco: Endereco;
 }
 

@@ -4,16 +4,21 @@ import { useAuth } from "../hooks/useAuth.js";
 import { Button, Card } from "../components/Common.js";
 import { Toast, useToast } from "../components/Toast.js";
 import { api } from "../services/api.js";
+import {
+  extractBrandingFromConfig,
+  getStoredBranding,
+  persistBranding,
+  type BrandingData,
+} from "../utils/branding.js";
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [branding, setBranding] = useState<{
-    nomeFraternidade?: string;
-    logoBase64?: string;
-  } | null>(null);
+  const [branding, setBranding] = useState<BrandingData | null>(() =>
+    getStoredBranding(),
+  );
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,10 +29,9 @@ export const LoginPage: React.FC = () => {
       try {
         const response = await api.get<any>("/config");
         const configData = response.data.data || response.data;
-        setBranding({
-          nomeFraternidade: configData.nomeFraternidade,
-          logoBase64: configData.logoBase64,
-        });
+        const nextBranding = extractBrandingFromConfig(configData);
+        setBranding(nextBranding);
+        persistBranding(nextBranding);
       } catch (error) {
         console.error("Erro ao carregar identidade visual:", error);
       }
@@ -65,11 +69,17 @@ export const LoginPage: React.FC = () => {
       // Redirecionar baseado no role
       setTimeout(() => {
         const user = JSON.parse(localStorage.getItem("user") || "{}");
-        if (user.role === "ADMIN") {
-          navigate("/admin");
-        } else if (user.role === "MEMBER") {
-          navigate("/member");
+        if (user.role === "ADMIN_REGIONAL" || user.role === "ADMIN") {
+          navigate("/admin/fraternidades");
+          return;
         }
+
+        if (user.role === "ADMIN_LOCAL") {
+          navigate("/admin/membros");
+          return;
+        }
+
+        navigate("/member/profile");
       }, 500);
     } catch (error: any) {
       showToast(error.message || "Erro ao fazer login", "error");
@@ -79,7 +89,8 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-600 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,214,153,0.18),_transparent_26%)] pointer-events-none" />
       {toast && (
         <Toast
           message={toast.message}
@@ -88,19 +99,24 @@ export const LoginPage: React.FC = () => {
         />
       )}
 
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        <Card className="w-full bg-white/85 backdrop-blur-xl border border-white/60 shadow-2xl shadow-black/10 rounded-3xl p-8 relative z-10">
         <div className="text-center mb-8">
           {branding?.logoBase64 ? (
             <img
               src={branding.logoBase64}
+              loading="eager"
+              decoding="async"
               alt="Logo do sistema"
-              className="w-16 h-16 rounded-full object-cover mx-auto mb-2"
+              className="w-18 h-18 rounded-full object-cover mx-auto mb-3 ring-4 ring-primary-100 shadow-lg"
             />
           ) : (
-            <h1 className="text-4xl font-bold mb-2">🕊️</h1>
+            <div className="w-18 h-18 rounded-full mx-auto mb-3 bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-4xl text-white shadow-lg">
+              🕊️
+            </div>
           )}
-          <h2 className="text-2xl font-bold text-gray-800">OFS</h2>
-          <p className="text-gray-600 text-sm">{tituloSistema}</p>
+          <h2 className="text-3xl font-extrabold text-gray-900">OFS</h2>
+          <p className="text-gray-600 text-sm mt-1">{tituloSistema}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,7 +129,7 @@ export const LoginPage: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
             />
           </div>
 
@@ -127,7 +143,7 @@ export const LoginPage: React.FC = () => {
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-300"
               />
               <button
                 type="button"
@@ -168,7 +184,7 @@ export const LoginPage: React.FC = () => {
             type="submit"
             variant="primary"
             loading={loading}
-            className="w-full"
+            className="w-full py-3 text-base"
           >
             Entrar
           </Button>
@@ -195,7 +211,8 @@ export const LoginPage: React.FC = () => {
             WSWEB
           </a>
         </p>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

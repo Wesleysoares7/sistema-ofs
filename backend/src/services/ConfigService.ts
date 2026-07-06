@@ -1,4 +1,5 @@
 import { prisma } from "../utils/prisma.js";
+import { createError } from "../utils/errors.js";
 
 export class ConfigService {
   async getConfig() {
@@ -12,8 +13,7 @@ export class ConfigService {
         config = await prisma.config.create({
           data: {
             id: 'sistema-ofs',
-            valorAnual: 0,
-            valorMensal: 0
+            valorAnual: 0
           }
         });
       }
@@ -30,14 +30,10 @@ export class ConfigService {
     logoBase64?: string | null;
     valorAnual?: number;
     descricaoAnual?: string | null;
-    valorMensal?: number;
-    descricaoMensal?: string | null;
-    chavePix?: string;
+    chavePix?: string | null;
     qrcodePixBase64?: string | null;
   }) {
     try {
-      console.log("🔄 ConfigService.updateConfig chamado com:", data);
-      
       const config = await prisma.config.upsert({
         where: { id: 'sistema-ofs' },
         create: {
@@ -46,8 +42,6 @@ export class ConfigService {
           logoBase64: data.logoBase64,
           valorAnual: data.valorAnual || 0,
           descricaoAnual: data.descricaoAnual,
-          valorMensal: data.valorMensal || 0,
-          descricaoMensal: data.descricaoMensal,
           chavePix: data.chavePix,
           qrcodePixBase64: data.qrcodePixBase64
         },
@@ -56,19 +50,96 @@ export class ConfigService {
           logoBase64: data.logoBase64 !== undefined ? data.logoBase64 : undefined,
           valorAnual: data.valorAnual !== undefined ? data.valorAnual : undefined,
           descricaoAnual: data.descricaoAnual !== undefined ? data.descricaoAnual : undefined,
-          valorMensal: data.valorMensal !== undefined ? data.valorMensal : undefined,
-          descricaoMensal: data.descricaoMensal !== undefined ? data.descricaoMensal : undefined,
           chavePix: data.chavePix !== undefined ? data.chavePix : undefined,
           qrcodePixBase64: data.qrcodePixBase64 !== undefined ? data.qrcodePixBase64 : undefined
         }
       });
 
-      console.log("✅ ConfigService: Dados salvos com sucesso:", config);
       return config;
     } catch (error) {
       console.error('❌ ConfigService: Erro ao atualizar configurações:', error);
       throw error;
     }
+  }
+
+  async getFraternidadeFinanceiraConfig(fraternidadeId: string) {
+    if (!fraternidadeId) {
+      throw createError(400, "Fraternidade não informada");
+    }
+
+    const config = await prisma.configuracaoFinanceiraFraternidade.findUnique({
+      where: { fraternidadeId },
+      include: {
+        fraternidade: true,
+      },
+    });
+
+    if (!config) {
+      return {
+        fraternidadeId,
+        mensalAtiva: false,
+        valorMensal: null,
+        chavePix: null,
+        qrcodePixBase64: null,
+      };
+    }
+
+    return config;
+  }
+
+  async upsertFraternidadeFinanceiraConfig(
+    fraternidadeId: string,
+    data: {
+      mensalAtiva?: boolean;
+      valorMensal?: number | null;
+      chavePix?: string | null;
+      qrcodePixBase64?: string | null;
+    },
+  ) {
+    if (!fraternidadeId) {
+      throw createError(400, "Fraternidade não informada");
+    }
+
+    const fraternidade = await prisma.fraternidade.findUnique({
+      where: { id: fraternidadeId },
+    });
+
+    if (!fraternidade) {
+      throw createError(404, "Fraternidade não encontrada");
+    }
+
+    return prisma.configuracaoFinanceiraFraternidade.upsert({
+      where: { fraternidadeId },
+      create: {
+        fraternidadeId,
+        mensalAtiva: data.mensalAtiva ?? false,
+        valorMensal:
+          data.valorMensal !== undefined && data.valorMensal !== null
+            ? data.valorMensal
+            : null,
+        chavePix:
+          data.chavePix !== undefined && data.chavePix !== null
+            ? data.chavePix
+            : null,
+        qrcodePixBase64:
+          data.qrcodePixBase64 !== undefined
+            ? data.qrcodePixBase64
+            : null,
+      },
+      update: {
+        mensalAtiva: data.mensalAtiva,
+        valorMensal:
+          data.valorMensal !== undefined ? data.valorMensal : undefined,
+        chavePix: data.chavePix !== undefined ? data.chavePix : undefined,
+        qrcodePixBase64:
+          data.qrcodePixBase64 !== undefined
+            ? data.qrcodePixBase64
+            : undefined,
+      },
+      include: {
+        fraternidade: true,
+      },
+    });
   }
 }
 

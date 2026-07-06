@@ -3,7 +3,8 @@ import { AdminLayout } from "../components/Layout.js";
 import { Card, Button, Badge } from "../components/Common.js";
 import { Modal } from "../components/Modal.js";
 import { api } from "../services/api.js";
-import { User } from "../types/index.js";
+import { Fraternidade, User } from "../types/index.js";
+import { useAuth } from "../hooks/useAuth.js";
 import {
   imageToBase64,
   isValidImageFile,
@@ -12,7 +13,42 @@ import {
 import { includesNormalized } from "../utils/textSearch.js";
 
 export const AdminMembrosPage: React.FC = () => {
+  const { user: loggedUser } = useAuth();
+  const isRegionalAdmin =
+    loggedUser?.role === "ADMIN_REGIONAL" || loggedUser?.role === "ADMIN";
+
+  const isMemberUser = (role?: string) =>
+    role === "IRMAO_MEMBRO" || role === "MEMBER";
+
+  const isValidCPF = (value: string) => {
+    const cpf = value.replace(/\D/g, "");
+    if (cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+    const calcDigit = (base: string, factor: number) => {
+      let total = 0;
+      for (let i = 0; i < base.length; i++) {
+        total += parseInt(base[i], 10) * (factor - i);
+      }
+      const remainder = total % 11;
+      return remainder < 2 ? 0 : 11 - remainder;
+    };
+
+    const firstDigit = calcDigit(cpf.slice(0, 9), 10);
+    const secondDigit = calcDigit(cpf.slice(0, 10), 11);
+
+    return (
+      firstDigit === parseInt(cpf[9], 10) &&
+      secondDigit === parseInt(cpf[10], 10)
+    );
+  };
+
+  const getRoleLabel = (role?: string) =>
+    role === "ADMIN_LOCAL" ? "Administrador Local" : "Membro";
+
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [cadastrosPendentes, setCadastrosPendentes] = useState<User[]>([]);
+  const [fraternidades, setFraternidades] = useState<Fraternidade[]>([]);
   const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -22,15 +58,40 @@ export const AdminMembrosPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    loadFraternidades();
+    loadPendingMembers();
+  }, []);
+
+  useEffect(() => {
     loadMembers();
   }, [statusFilter]);
+
+  const loadFraternidades = async () => {
+    try {
+      const response = await api.get<Fraternidade[]>("/fraternidades");
+      setFraternidades(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar fraternidades:", error);
+    }
+  };
+
+  const loadPendingMembers = async () => {
+    try {
+      const response = await api.get<User[]>("/users/status/PENDENTE?take=1000");
+      setCadastrosPendentes(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar cadastros pendentes:", error);
+    }
+  };
 
   const loadMembers = async () => {
     try {
       setLoading(true);
       let url = "/users";
       if (statusFilter) {
-        url = `/users/status/${statusFilter}`;
+        url = `/users/status/${statusFilter}?take=1000`;
+      } else {
+        url = "/users?take=1000";
       }
       const response = await api.get<User[]>(url);
       setUsuarios(response.data);
@@ -41,14 +102,40 @@ export const AdminMembrosPage: React.FC = () => {
     }
   };
 
-  const handleApproveMember = async (id: string) => {
+  const getFraternidadeLabel = (fraternidadeId?: string | null) => {
+    if (!fraternidadeId) {
+      return "Não informada";
+    }
+
+    const fraternidade = fraternidades.find((item) => item.id === fraternidadeId);
+    if (!fraternidade) {
+      return "Fraternidade não encontrada";
+    }
+
+    return `${fraternidade.nomeFraternidade} - ${fraternidade.cidade} (${fraternidade.distrito})`;
+  };
+
+  const handleApproveMember = async (user: User) => {
+    if (!user.fraternidadeId) {
+      alert(
+        "Não é possível aprovar sem fraternidade vinculada. Edite o cadastro e informe a fraternidade antes de aprovar.",
+      );
+      return;
+    }
+
     try {
-      await api.post(`/users/${id}/approve`, {
+      await api.post(`/users/${user.id}/approve`, {
         tipoMembro: "INICIANTE",
       });
-      loadMembers();
+      await loadMembers();
+      await loadPendingMembers();
     } catch (error) {
       console.error("Erro ao aprovar membro:", error);
+      const err = error as any;
+      alert(
+        err?.response?.data?.error ||
+          "Não foi possível aprovar o cadastro no momento.",
+      );
     }
   };
 
@@ -67,8 +154,10 @@ export const AdminMembrosPage: React.FC = () => {
         email: detail.email,
         telefone: detail.telefone,
         dataNascimento,
+        role: detail.role || "IRMAO_MEMBRO",
         tipoMembro: detail.tipoMembro || "INICIANTE",
         status: detail.status,
+        fraternidadeId: detail.fraternidadeId || "",
         fotoBase64: detail.fotoBase64 || null,
         senha: "",
         endereco: {
@@ -94,7 +183,8 @@ export const AdminMembrosPage: React.FC = () => {
 
     try {
       await api.delete(`/users/${user.id}`);
-      loadMembers();
+      await loadMembers();
+      await loadPendingMembers();
     } catch (error) {
       console.error("Erro ao excluir membro:", error);
       alert("Erro ao excluir membro. Tente novamente.");
@@ -109,11 +199,25 @@ export const AdminMembrosPage: React.FC = () => {
 
       if (!payload.nome) delete payload.nome;
       if (!payload.email) delete payload.email;
-      if (!payload.cpf) delete payload.cpf;
+      if (payload.cpf !== undefined) {
+        const cpfLimpo = String(payload.cpf).replace(/\D/g, "");
+        if (cpfLimpo && !isValidCPF(cpfLimpo)) {
+          alert("CPF inválido");
+          return;
+        }
+        payload.cpf = cpfLimpo;
+      }
       if (!payload.telefone) delete payload.telefone;
       if (!payload.dataNascimento) delete payload.dataNascimento;
       if (!payload.tipoMembro) delete payload.tipoMembro;
       if (!payload.status) delete payload.status;
+      if (!payload.role) delete payload.role;
+
+      if (!isRegionalAdmin) {
+        delete payload.fraternidadeId;
+      } else if (payload.fraternidadeId === "") {
+        delete payload.fraternidadeId;
+      }
 
       if (!payload.senha) {
         delete payload.senha;
@@ -134,7 +238,8 @@ export const AdminMembrosPage: React.FC = () => {
 
       await api.put(`/users/${editingUser.id}`, payload);
       setIsModalOpen(false);
-      loadMembers();
+      await loadMembers();
+      await loadPendingMembers();
     } catch (error) {
       console.error("Erro ao salvar membro:", error);
       const err = error as any;
@@ -230,6 +335,65 @@ export const AdminMembrosPage: React.FC = () => {
           </Button>
         </div>
 
+        <Card>
+          <h2 className="text-xl font-bold text-gray-800 mb-3">Cadastros Pendentes</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            {isRegionalAdmin
+              ? "Revise os pedidos de entrada, transfira a fraternidade quando necessário e aprove."
+              : "Revise e aprove os pedidos de entrada da sua fraternidade."}
+          </p>
+
+          <div className="space-y-3">
+            {cadastrosPendentes.length > 0 ? (
+              cadastrosPendentes.map((user) => (
+                <div
+                  key={`pendente-${user.id}`}
+                  className="border border-gray-200 rounded-lg p-4 bg-white"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{user.nome}</p>
+                      <p className="text-xs text-gray-600">{user.email}</p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Fraternidade solicitada: {getFraternidadeLabel(user.fraternidadeId)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleEditMember(user)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={() => handleApproveMember(user)}
+                        disabled={!user.fraternidadeId}
+                        title={
+                          !user.fraternidadeId
+                            ? "Vincule uma fraternidade antes de aprovar"
+                            : "Aprovar cadastro"
+                        }
+                      >
+                        Aprovar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {!user.fraternidadeId && (
+                    <p className="text-xs text-red-600 mt-2">
+                      A aprovação está bloqueada: este cadastro não possui fraternidade vinculada.
+                    </p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">Não há cadastros pendentes no momento.</p>
+            )}
+          </div>
+        </Card>
+
         <div>
           <input
             type="text"
@@ -258,7 +422,7 @@ export const AdminMembrosPage: React.FC = () => {
                         {user.nome}
                       </p>
                       <p className="text-xs text-gray-600 break-all">
-                        {user.email}
+                        {getFraternidadeLabel(user.fraternidadeId)}
                       </p>
                     </div>
                     <Badge status={user.status} />
@@ -266,13 +430,15 @@ export const AdminMembrosPage: React.FC = () => {
 
                   <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
                     <span>Tipo: {user.tipoMembro || "—"}</span>
+                    <span>Acesso: {getRoleLabel(user.role)}</span>
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-3">
                     {user.status === "PENDENTE" && (
                       <button
-                        onClick={() => handleApproveMember(user.id)}
-                        className="text-primary-600 hover:text-primary-800 font-semibold"
+                        onClick={() => handleApproveMember(user)}
+                        disabled={!user.fraternidadeId}
+                        className="text-primary-600 hover:text-primary-800 font-semibold disabled:text-gray-400 disabled:cursor-not-allowed"
                       >
                         ✓ Aprovar
                       </button>
@@ -283,7 +449,7 @@ export const AdminMembrosPage: React.FC = () => {
                     >
                       ✎ Editar
                     </button>
-                    {user.role === "MEMBER" && (
+                    {isMemberUser(user.role) && (
                       <button
                         onClick={() => handleDeleteMember(user)}
                         className="text-red-600 hover:text-red-800 font-semibold"
@@ -310,13 +476,16 @@ export const AdminMembrosPage: React.FC = () => {
                     Nome
                   </th>
                   <th className="px-3 md:px-6 py-3 text-left text-sm font-semibold text-gray-700">
-                    Email
+                    Fraternidade Local
                   </th>
                   <th className="px-3 md:px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     Status
                   </th>
                   <th className="px-3 md:px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     Tipo
+                  </th>
+                  <th className="px-3 md:px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                    Acesso
                   </th>
                   <th className="px-3 md:px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     Ações
@@ -331,7 +500,7 @@ export const AdminMembrosPage: React.FC = () => {
                         {user.nome}
                       </td>
                       <td className="px-3 md:px-6 py-4 text-sm text-gray-600 break-all">
-                        {user.email}
+                        {getFraternidadeLabel(user.fraternidadeId)}
                       </td>
                       <td className="px-3 md:px-6 py-4 text-sm">
                         <Badge status={user.status} />
@@ -339,11 +508,15 @@ export const AdminMembrosPage: React.FC = () => {
                       <td className="px-3 md:px-6 py-4 text-sm text-gray-600">
                         {user.tipoMembro || "—"}
                       </td>
+                      <td className="px-3 md:px-6 py-4 text-sm text-gray-600">
+                        {getRoleLabel(user.role)}
+                      </td>
                       <td className="px-3 md:px-6 py-4 text-sm space-x-2">
                         {user.status === "PENDENTE" && (
                           <button
-                            onClick={() => handleApproveMember(user.id)}
-                            className="text-primary-600 hover:text-primary-800 font-semibold"
+                            onClick={() => handleApproveMember(user)}
+                            disabled={!user.fraternidadeId}
+                            className="text-primary-600 hover:text-primary-800 font-semibold disabled:text-gray-400 disabled:cursor-not-allowed"
                           >
                             ✓ Aprovar
                           </button>
@@ -354,7 +527,7 @@ export const AdminMembrosPage: React.FC = () => {
                         >
                           ✎ Editar
                         </button>
-                        {user.role === "MEMBER" && (
+                        {isMemberUser(user.role) && (
                           <button
                             onClick={() => handleDeleteMember(user)}
                             className="text-red-600 hover:text-red-800 font-semibold"
@@ -368,7 +541,7 @@ export const AdminMembrosPage: React.FC = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-3 md:px-6 py-4 text-center text-gray-600"
                     >
                       Nenhum membro encontrado
@@ -450,7 +623,7 @@ export const AdminMembrosPage: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              CPF
+              CPF (opcional)
             </label>
             <input
               type="text"
@@ -458,6 +631,7 @@ export const AdminMembrosPage: React.FC = () => {
               onChange={(e) =>
                 setEditData({ ...editData, cpf: e.target.value })
               }
+              placeholder="Somente números"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             />
           </div>
@@ -488,6 +662,36 @@ export const AdminMembrosPage: React.FC = () => {
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Perfil de Acesso
+            </label>
+            {isRegionalAdmin ? (
+              <select
+                value={editData.role || "IRMAO_MEMBRO"}
+                onChange={(e) =>
+                  setEditData({ ...editData, role: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+              >
+                <option value="IRMAO_MEMBRO">Membro</option>
+                <option value="ADMIN_LOCAL">Administrador Local</option>
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={editData.role === "ADMIN_LOCAL" ? "Administrador Local" : "Membro"}
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+              />
+            )}
+            {!isRegionalAdmin && (
+              <p className="text-xs text-gray-500 mt-1">
+                Alteração de perfil de acesso permitida apenas ao Administrador Regional.
+              </p>
+            )}
           </div>
 
           <div>
@@ -653,6 +857,42 @@ export const AdminMembrosPage: React.FC = () => {
               <option value="PENDENTE">Pendente</option>
               <option value="INATIVO">Inativo</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fraternidade
+            </label>
+            {isRegionalAdmin ? (
+              <select
+                value={editData.fraternidadeId || ""}
+                onChange={(e) =>
+                  setEditData({ ...editData, fraternidadeId: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+              >
+                <option value="" disabled>
+                  Selecione a fraternidade de destino
+                </option>
+                {fraternidades.map((fraternidade) => (
+                  <option key={fraternidade.id} value={fraternidade.id}>
+                    {fraternidade.nomeFraternidade} - {fraternidade.cidade} ({fraternidade.distrito})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={getFraternidadeLabel(editData.fraternidadeId)}
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+              />
+            )}
+            {!isRegionalAdmin && (
+              <p className="text-xs text-gray-500 mt-1">
+                Transferência de fraternidade permitida apenas ao Administrador Regional.
+              </p>
+            )}
           </div>
         </div>
       </Modal>

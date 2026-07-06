@@ -1,10 +1,63 @@
 import { ContribuicaoRepository } from "../repositories/ContribuicaoRepository.js";
 import { UserRepository } from "../repositories/UserRepository.js";
 import { createError } from "../utils/errors.js";
+import { prisma } from "../utils/prisma.js";
 import {
   UpdateContribuicaoAnualInput,
   UpdateContribuicaoMensalInput,
 } from "../schemas/index.js";
+import type { AccessScope } from "./UserService.js";
+
+function isRegionalAdminRole(role?: string) {
+  return role === "ADMIN_REGIONAL" || role === "ADMIN";
+}
+
+function isLocalAdminRole(role?: string) {
+  return role === "ADMIN_LOCAL";
+}
+
+function isMemberRole(role?: string) {
+  return role === "IRMAO_MEMBRO" || role === "MEMBER";
+}
+
+function buildUserFilterFromScope(scope?: AccessScope) {
+  if (!scope || isRegionalAdminRole(scope.role)) {
+    return undefined;
+  }
+
+  if (isLocalAdminRole(scope.role)) {
+    if (!scope.fraternidadeId) {
+      throw createError(403, "Administrador local sem fraternidade vinculada");
+    }
+
+    return { fraternidadeId: scope.fraternidadeId };
+  }
+
+  if (isMemberRole(scope.role)) {
+    return { userId: scope.userId };
+  }
+
+  throw createError(403, "Perfil sem permissão para acessar este recurso");
+}
+
+function assertCanAccessUser(scope: AccessScope | undefined, user: any) {
+  if (!scope || isRegionalAdminRole(scope.role)) return;
+
+  if (isLocalAdminRole(scope.role)) {
+    if (user.id === scope.userId) {
+      return;
+    }
+
+    if (!scope.fraternidadeId || scope.fraternidadeId !== user.fraternidadeId) {
+      throw createError(403, "Sem permissão para acessar dados de outra fraternidade");
+    }
+    return;
+  }
+
+  if (isMemberRole(scope.role) && user.id !== scope.userId) {
+    throw createError(403, "Sem permissão para acessar dados de outro usuário");
+  }
+}
 
 export class ContribuicaoService {
   private static getAnnualReferenceYear(exercicioAno: number) {
@@ -12,11 +65,13 @@ export class ContribuicaoService {
   }
 
   // Contribuição Anual
-  static async getContribuicaoAnualByUsuario(userId: string) {
+  static async getContribuicaoAnualByUsuario(userId: string, scope?: AccessScope) {
     const user = await UserRepository.findById(userId);
     if (!user) {
       throw createError(404, "Usuário não encontrado");
     }
+
+    assertCanAccessUser(scope, user);
 
     return await ContribuicaoRepository.findContribuicaoAnualByUser(userId);
   }
@@ -24,6 +79,7 @@ export class ContribuicaoService {
   static async updateContribuicaoAnual(
     id: string,
     input: UpdateContribuicaoAnualInput,
+    scope?: AccessScope,
   ) {
     const contribuicao =
       await ContribuicaoRepository.findContribuicaoAnualById(id);
@@ -31,6 +87,13 @@ export class ContribuicaoService {
     if (!contribuicao) {
       throw createError(404, "Contribuição anual não encontrada");
     }
+
+    const user = await UserRepository.findById(contribuicao.userId);
+    if (!user) {
+      throw createError(404, "Usuário não encontrado");
+    }
+
+    assertCanAccessUser(scope, user);
 
     const updated = await ContribuicaoRepository.updateContribuicaoAnual(id, {
       status: input.status,
@@ -43,11 +106,17 @@ export class ContribuicaoService {
     return updated;
   }
 
-  static async createMissingAnnualContributions(userId: string, ano?: number) {
+  static async createMissingAnnualContributions(
+    userId: string,
+    ano?: number,
+    scope?: AccessScope,
+  ) {
     const user = await UserRepository.findById(userId);
     if (!user) {
       throw createError(404, "Usuário não encontrado");
     }
+
+    assertCanAccessUser(scope, user);
 
     const currentYear = new Date().getFullYear();
     const existing =
@@ -85,11 +154,17 @@ export class ContribuicaoService {
   }
 
   // Contribuição Mensal
-  static async getContribuicaoMensalByUsuario(userId: string, ano?: number) {
+  static async getContribuicaoMensalByUsuario(
+    userId: string,
+    ano?: number,
+    scope?: AccessScope,
+  ) {
     const user = await UserRepository.findById(userId);
     if (!user) {
       throw createError(404, "Usuário não encontrado");
     }
+
+    assertCanAccessUser(scope, user);
 
     return await ContribuicaoRepository.findContribuicaoMensalByUser(
       userId,
@@ -100,6 +175,7 @@ export class ContribuicaoService {
   static async updateContribuicaoMensal(
     id: string,
     input: UpdateContribuicaoMensalInput,
+    scope?: AccessScope,
   ) {
     const contribuicao =
       await ContribuicaoRepository.findContribuicaoMensalById(id);
@@ -107,6 +183,13 @@ export class ContribuicaoService {
     if (!contribuicao) {
       throw createError(404, "Contribuição mensal não encontrada");
     }
+
+    const user = await UserRepository.findById(contribuicao.userId);
+    if (!user) {
+      throw createError(404, "Usuário não encontrado");
+    }
+
+    assertCanAccessUser(scope, user);
 
     const updated = await ContribuicaoRepository.updateContribuicaoMensal(id, {
       status: input.status,
@@ -119,11 +202,17 @@ export class ContribuicaoService {
     return updated;
   }
 
-  static async createMissingMonthlyContributions(userId: string, ano?: number) {
+  static async createMissingMonthlyContributions(
+    userId: string,
+    ano?: number,
+    scope?: AccessScope,
+  ) {
     const user = await UserRepository.findById(userId);
     if (!user) {
       throw createError(404, "Usuário não encontrado");
     }
+
+    assertCanAccessUser(scope, user);
 
     const currentYear = new Date().getFullYear();
     const yearToUse = ano || currentYear;
@@ -154,11 +243,17 @@ export class ContribuicaoService {
     return await this.getContribuicaoMensalByUsuario(userId, yearToUse);
   }
 
-  static async getDashboardMemberContributions(userId: string, ano?: number) {
+  static async getDashboardMemberContributions(
+    userId: string,
+    ano?: number,
+    scope?: AccessScope,
+  ) {
     const user = await UserRepository.findById(userId);
     if (!user) {
       throw createError(404, "Usuário não encontrado");
     }
+
+    assertCanAccessUser(scope, user);
 
     const currentYear = new Date().getFullYear();
     const yearToUse = ano || currentYear;
@@ -199,12 +294,17 @@ export class ContribuicaoService {
     };
   }
 
-  static async getAdminContributionsReport(ano?: number) {
+  static async getAdminContributionsReport(ano?: number, scope?: AccessScope) {
     const currentYear = new Date().getFullYear();
     const yearToCheck = ano || currentYear;
     const annualReferenceYear = this.getAnnualReferenceYear(yearToCheck);
 
-    const users = await UserRepository.findByStatus("ATIVO", 0, 1000);
+    const users = await UserRepository.findByStatus(
+      "ATIVO",
+      0,
+      1000,
+      buildUserFilterFromScope(scope),
+    );
 
     const report = await Promise.all(
       users.map(async (user) => {
@@ -226,6 +326,9 @@ export class ContribuicaoService {
           nome: user.nome,
           email: user.email,
           tipoMembro: user.tipoMembro,
+          fraternidadeId: user.fraternidadeId,
+          fraternidadeNome: user.fraternidade?.nomeFraternidade || "Sem fraternidade",
+          distrito: user.fraternidade?.distrito || "Sem distrito",
           anual: anual ? anual.status : "NÃO GERADO",
           anualId: anual ? anual.id : null,
           anualDataPagamento: anual?.dataPagamento || null,
@@ -243,5 +346,121 @@ export class ContribuicaoService {
     );
 
     return report;
+  }
+
+  static async createAnnualExercise(ano: number, scope?: AccessScope) {
+    if (!scope || !isRegionalAdminRole(scope.role)) {
+      throw createError(403, "Apenas o administrador regional pode criar exercício anual");
+    }
+
+    if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) {
+      throw createError(400, "Ano do exercício inválido");
+    }
+
+    const annualReferenceYear = this.getAnnualReferenceYear(ano);
+    const users = await UserRepository.findByStatus("ATIVO", 0, 10000);
+    const eligibleUsers = users.filter((user) => isMemberRole(user.role));
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const user of eligibleUsers) {
+      const existing = await ContribuicaoRepository.findContribuicaoAnualByAno(
+        user.id,
+        annualReferenceYear,
+      );
+
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+
+      await ContribuicaoRepository.createContribuicaoAnual(
+        user.id,
+        annualReferenceYear,
+      );
+      created += 1;
+    }
+
+    return {
+      exercicioAno: ano,
+      annualReferenceYear,
+      membrosElegiveis: eligibleUsers.length,
+      created,
+      skipped,
+    };
+  }
+
+  static async createMonthlyExercise(
+    ano: number,
+    scope?: AccessScope,
+    fraternidadeIdParam?: string,
+  ) {
+    if (!scope) {
+      throw createError(403, "Usuário sem contexto de acesso");
+    }
+
+    const regional = isRegionalAdminRole(scope.role);
+    const local = isLocalAdminRole(scope.role);
+
+    if (!regional && !local) {
+      throw createError(403, "Apenas administradores podem gerar mensalidades do exercício");
+    }
+
+    if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) {
+      throw createError(400, "Ano do exercício inválido");
+    }
+
+    const targetFraternidadeId = regional
+      ? fraternidadeIdParam
+      : scope.fraternidadeId || undefined;
+
+    if (!targetFraternidadeId) {
+      throw createError(400, "Fraternidade não informada para gerar mensalidades");
+    }
+
+    const monthlyConfig = await prisma.configuracaoFinanceiraFraternidade.findUnique({
+      where: { fraternidadeId: targetFraternidadeId },
+    });
+
+    if (!monthlyConfig?.mensalAtiva) {
+      throw createError(
+        400,
+        "A mensalidade não está ativa para esta fraternidade. Ative antes de gerar o exercício.",
+      );
+    }
+
+    const users = await UserRepository.findByStatus("ATIVO", 0, 10000, {
+      fraternidadeId: targetFraternidadeId,
+    });
+    const eligibleUsers = users.filter((user) => isMemberRole(user.role));
+
+    let createdContribuicoes = 0;
+    let usersWithCreation = 0;
+
+    for (const user of eligibleUsers) {
+      const existing = await ContribuicaoRepository.findContribuicaoMensalByUser(
+        user.id,
+        ano,
+      );
+      const existingMonths = new Set(existing.map((item) => item.mes));
+      const missingCount = 12 - existingMonths.size;
+
+      if (missingCount <= 0) {
+        continue;
+      }
+
+      await ContribuicaoRepository.createAnoContribuicoesMensais(user.id, ano);
+      usersWithCreation += 1;
+      createdContribuicoes += missingCount;
+    }
+
+    return {
+      exercicioAno: ano,
+      fraternidadeId: targetFraternidadeId,
+      membrosElegiveis: eligibleUsers.length,
+      usersWithCreation,
+      createdContribuicoes,
+    };
   }
 }

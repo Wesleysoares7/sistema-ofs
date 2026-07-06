@@ -326,6 +326,14 @@ Para preparar para migração de SQLite para PostgreSQL:
    npm run build
    ```
 
+## 💾 Backup e Restauração
+
+- Guia completo em [BACKUP.md](BACKUP.md)
+- Checklist mensal em [BACKUP_CHECKLIST.md](BACKUP_CHECKLIST.md)
+- Scripts PowerShell em `scripts/backup`
+- Clique duplo: `backup-now.bat`, `backup-schedule.bat`, `backup-restore.bat`
+- Comando único: `npm run backup`
+
 ## 🐛 Troubleshooting
 
 ### Erro: "CORS blocked"

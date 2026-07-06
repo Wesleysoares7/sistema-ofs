@@ -24,19 +24,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Carregar token do localStorage ao iniciar
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      api.setToken(storedToken);
-    }
-
-    setLoading(false);
+  const clearAuthState = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    api.setToken(null);
   }, []);
+
+  // Valida o token salvo antes de liberar rotas protegidas.
+  useEffect(() => {
+    let active = true;
+
+    const bootstrapAuth = async () => {
+      const storedToken = localStorage.getItem("token");
+
+      if (!storedToken) {
+        if (active) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        api.setToken(storedToken);
+        const response = await api.get<User>("/auth/profile");
+
+        if (!active) {
+          return;
+        }
+
+        setToken(storedToken);
+        setUser(response.data);
+        localStorage.setItem("user", JSON.stringify(response.data));
+      } catch {
+        if (active) {
+          clearAuthState();
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    bootstrapAuth();
+
+    return () => {
+      active = false;
+    };
+  }, [clearAuthState]);
 
   const login = useCallback(async (email: string, senha: string) => {
     try {
@@ -70,12 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    api.setToken(null);
-  }, []);
+    clearAuthState();
+  }, [clearAuthState]);
 
   return (
     <AuthContext.Provider

@@ -7,6 +7,7 @@ export interface AuthRequest {
   userEmail?: string;
   userRole?: string;
   userStatus?: string;
+  userFraternidadeId?: string | null;
 }
 
 declare global {
@@ -16,6 +17,7 @@ declare global {
       userEmail?: string;
       userRole?: string;
       userStatus?: string;
+      userFraternidadeId?: string | null;
     }
   }
 }

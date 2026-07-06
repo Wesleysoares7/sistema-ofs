@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { AdminLayout } from "../components/Layout.js";
-import { Card, Badge } from "../components/Common.js";
+import { Card, Badge, Button } from "../components/Common.js";
 import { Modal } from "../components/Modal.js";
 import { api } from "../services/api.js";
 import { includesNormalized } from "../utils/textSearch.js";
+import { useAuth } from "../hooks/useAuth.js";
 
 interface ContributionReport {
   userId: string;
   nome: string;
   email: string;
   tipoMembro: string;
+  fraternidadeId?: string | null;
+  fraternidadeNome?: string;
+  distrito?: string;
   anual: string;
   anualId?: string;
   anualDataPagamento?: string | null;
@@ -29,11 +33,26 @@ interface MonthlyContribution {
   dataPagamento?: string;
 }
 
+interface FraternidadeFinanceiraConfig {
+  fraternidadeId: string;
+  mensalAtiva: boolean;
+  valorMensal: number | null;
+}
+
 export const AdminContribuicoesPage: React.FC = () => {
+  const { user } = useAuth();
+  const isRegionalAdmin =
+    user?.role === "ADMIN_REGIONAL" || user?.role === "ADMIN";
+  const isLocalAdmin = user?.role === "ADMIN_LOCAL";
+
   const [relatorio, setRelatorio] = useState<ContributionReport[]>([]);
   const [busca, setBusca] = useState("");
+  const [distritoFilter, setDistritoFilter] = useState("TODOS");
+  const [fraternidadeFilter, setFraternidadeFilter] = useState("TODAS");
   const [loading, setLoading] = useState(true);
-  const [ano, setAno] = useState(new Date().getFullYear());
+  const currentYear = new Date().getFullYear();
+  const [ano, setAno] = useState(currentYear);
+  const [anoInput, setAnoInput] = useState(String(currentYear));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContribution, setEditingContribution] = useState<any>(null);
   const [editData, setEditData] = useState<any>({});
@@ -41,6 +60,18 @@ export const AdminContribuicoesPage: React.FC = () => {
   const [monthlyContributions, setMonthlyContributions] = useState<
     MonthlyContribution[]
   >([]);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [regionalAnualValue, setRegionalAnualValue] = useState(0);
+  const [regionalConfigSubmitting, setRegionalConfigSubmitting] =
+    useState(false);
+  const [financialConfig, setFinancialConfig] =
+    useState<FraternidadeFinanceiraConfig | null>(null);
+  const [localConfigSubmitting, setLocalConfigSubmitting] = useState(false);
+  const [annualExerciseSubmitting, setAnnualExerciseSubmitting] =
+    useState(false);
+  const [monthlyExerciseSubmitting, setMonthlyExerciseSubmitting] =
+    useState(false);
   const anoReferenciaAnual = ano - 1;
 
   const toDateInputValue = (isoDate?: string | null) => {
@@ -60,6 +91,35 @@ export const AdminContribuicoesPage: React.FC = () => {
     loadRelatorio();
   }, [ano]);
 
+  useEffect(() => {
+    loadFinanceConfigs();
+  }, [user?.role]);
+
+  const loadFinanceConfigs = async () => {
+    try {
+      if (isRegionalAdmin) {
+        const response = await api.get<any>("/config");
+        const configData = response.data.data || response.data;
+        setRegionalAnualValue(configData.valorAnual || 0);
+      }
+
+      if (isLocalAdmin) {
+        const response = await api.get<any>("/config/fraternidade-financeira");
+        const configData = response.data.data || response.data;
+        setFinancialConfig({
+          fraternidadeId: configData.fraternidadeId,
+          mensalAtiva: !!configData.mensalAtiva,
+          valorMensal:
+            configData.valorMensal !== undefined && configData.valorMensal !== null
+              ? Number(configData.valorMensal)
+              : null,
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações financeiras:", error);
+    }
+  };
+
   const loadRelatorio = async () => {
     try {
       setLoading(true);
@@ -74,21 +134,132 @@ export const AdminContribuicoesPage: React.FC = () => {
     }
   };
 
+  const handleSaveRegionalAnnualValue = async () => {
+    try {
+      setRegionalConfigSubmitting(true);
+      setErrorMessage("");
+      setFeedbackMessage("");
+      await api.put("/config", {
+        valorAnual: regionalAnualValue,
+      });
+      setFeedbackMessage("Valor anual regional atualizado com sucesso.");
+    } catch (error: any) {
+      setErrorMessage(
+        error?.response?.data?.error ||
+          "Não foi possível atualizar o valor anual regional.",
+      );
+    } finally {
+      setRegionalConfigSubmitting(false);
+    }
+  };
+
+  const handleSaveLocalMonthlyConfig = async () => {
+    if (!financialConfig) return;
+
+    try {
+      setLocalConfigSubmitting(true);
+      setErrorMessage("");
+      setFeedbackMessage("");
+
+      await api.put("/config/fraternidade-financeira", {
+        mensalAtiva: financialConfig.mensalAtiva,
+        valorMensal: financialConfig.mensalAtiva
+          ? financialConfig.valorMensal || 0
+          : null,
+      });
+
+      setFeedbackMessage(
+        "Configuração de mensalidade da fraternidade salva com sucesso.",
+      );
+    } catch (error: any) {
+      setErrorMessage(
+        error?.response?.data?.error ||
+          "Não foi possível salvar a configuração de mensalidade.",
+      );
+    } finally {
+      setLocalConfigSubmitting(false);
+    }
+  };
+
+  const handleGenerateAnnualExercise = async () => {
+    try {
+      setAnnualExerciseSubmitting(true);
+      setErrorMessage("");
+      setFeedbackMessage("");
+
+      const response = await api.post<any>(`/contribuicoes/exercicio/anual?ano=${ano}`);
+      const data = response.data;
+
+      setFeedbackMessage(
+        `Exercício anual ${data.exercicioAno} gerado. Novas anuais: ${data.created}. Já existentes: ${data.skipped}.`,
+      );
+      await loadRelatorio();
+    } catch (error: any) {
+      setErrorMessage(
+        error?.response?.data?.error ||
+          "Não foi possível gerar o exercício anual.",
+      );
+    } finally {
+      setAnnualExerciseSubmitting(false);
+    }
+  };
+
+  const handleGenerateMonthlyExercise = async () => {
+    if (!financialConfig?.mensalAtiva) {
+      setErrorMessage(
+        "Ative a mensalidade da fraternidade antes de gerar mensalidades do exercício.",
+      );
+      return;
+    }
+
+    try {
+      setMonthlyExerciseSubmitting(true);
+      setErrorMessage("");
+      setFeedbackMessage("");
+
+      const response = await api.post<any>(
+        `/contribuicoes/exercicio/mensal?ano=${ano}`,
+      );
+      const data = response.data;
+
+      setFeedbackMessage(
+        `Mensalidades do exercício ${data.exercicioAno} geradas. Novas parcelas: ${data.createdContribuicoes}. Membros afetados: ${data.usersWithCreation}.`,
+      );
+      await loadRelatorio();
+    } catch (error: any) {
+      setErrorMessage(
+        error?.response?.data?.error ||
+          "Não foi possível gerar as mensalidades do exercício.",
+      );
+    } finally {
+      setMonthlyExerciseSubmitting(false);
+    }
+  };
+
+  const handleApplyYear = () => {
+    const parsed = parseInt(anoInput, 10);
+
+    if (!Number.isInteger(parsed) || parsed < 2000 || parsed > 2100) {
+      setErrorMessage("Informe um exercício válido entre 2000 e 2100.");
+      return;
+    }
+
+    setErrorMessage("");
+    setAno(parsed);
+  };
+
   const handleEditAnnual = async (row: ContributionReport) => {
     try {
-      setLoading(true);
-
-      // Se não tem anualId, cria as contribuições anuais faltantes para o ano selecionado
       if (!row.anualId) {
-        console.log("Criando contribuições anuais faltantes para:", row.userId);
-        await api.post(`/contribuicoes/anual/${row.userId}/missing?ano=${ano}`);
-        // Recarrega o relatório para pegar os novos IDs
-        await loadRelatorio();
+        setErrorMessage(
+          `Não existe contribuição anual para ${row.nome} no exercício ${anoReferenciaAnual}. O administrador regional deve gerar o exercício anual antes da edição individual.`,
+        );
+        return;
       }
 
       setEditingContribution({
         type: "anual",
-        row: { ...row, anualId: row.anualId || "created" },
+        row,
       });
       setEditData({
         status: row.anual,
@@ -114,16 +285,17 @@ export const AdminContribuicoesPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Primeiro, cria as contribuições mensais faltantes para o ano selecionado
-      console.log("Criando contribuições mensais faltantes para:", row.userId);
-      await api.post(`/contribuicoes/mensal/${row.userId}/missing?ano=${ano}`);
-
-      // Depois carrega as contribuições mensais
       const response = await api.get<MonthlyContribution[]>(
         `/contribuicoes/mensal/${row.userId}?ano=${ano}`,
       );
 
-      console.log("Contribuições mensais carregadas:", response.data);
+      if (response.data.length === 0) {
+        setErrorMessage(
+          `Não existem mensalidades para ${row.nome} no exercício ${ano}. Gere as mensalidades do exercício antes da edição individual.`,
+        );
+        return;
+      }
+
       setMonthlyContributions(response.data);
       const statusById = Object.fromEntries(
         response.data.map((item) => [item.id, item.status]),
@@ -239,13 +411,45 @@ export const AdminContribuicoesPage: React.FC = () => {
     );
   }
 
+  const distritosDisponiveis = Array.from(
+    new Set(relatorio.map((row) => row.distrito || "Sem distrito")),
+  ).sort((a, b) => a.localeCompare(b));
+
+  const fraternidadesDisponiveis = Array.from(
+    new Set(
+      relatorio
+        .filter((row) =>
+          distritoFilter === "TODOS"
+            ? true
+            : (row.distrito || "Sem distrito") === distritoFilter,
+        )
+        .map((row) => row.fraternidadeNome || "Sem fraternidade"),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+
   const relatorioFiltrado = relatorio.filter((row) => {
+    if (
+      distritoFilter !== "TODOS" &&
+      (row.distrito || "Sem distrito") !== distritoFilter
+    ) {
+      return false;
+    }
+
+    if (
+      fraternidadeFilter !== "TODAS" &&
+      (row.fraternidadeNome || "Sem fraternidade") !== fraternidadeFilter
+    ) {
+      return false;
+    }
+
     const termo = busca.trim();
     if (!termo) return true;
 
     return (
       includesNormalized(row.nome, termo) ||
-      includesNormalized(row.email, termo)
+      includesNormalized(row.email, termo) ||
+      includesNormalized(row.fraternidadeNome || "", termo) ||
+      includesNormalized(row.distrito || "", termo)
     );
   });
 
@@ -256,79 +460,256 @@ export const AdminContribuicoesPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-            Contribuições
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Relatório de pagamentos dos membros
-          </p>
+        <div className="surface-panel rounded-3xl p-6 md:p-8 border border-white/70 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-sm font-semibold text-primary-700">
+                <span>💼</span>
+                Gestão financeira
+              </div>
+              <h1 className="mt-4 text-3xl md:text-4xl font-extrabold text-gray-900">
+                Contribuições
+              </h1>
+              <p className="text-gray-600 mt-2 max-w-2xl">
+                {isRegionalAdmin
+                  ? "Relatório financeiro global por distrito e fraternidade"
+                  : "Relatório financeiro da sua fraternidade"}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-2 sm:gap-4 lg:items-center">
+        {errorMessage && (
+          <Card className="border border-red-100">
+            <div className="rounded-xl border border-red-200 bg-red-50/90 p-3 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          </Card>
+        )}
+
+        {feedbackMessage && (
+          <Card className="border border-emerald-100">
+            <div className="rounded-xl border border-green-200 bg-green-50/90 p-3 text-sm text-green-700">
+              {feedbackMessage}
+            </div>
+          </Card>
+        )}
+
+        {isRegionalAdmin && (
+          <Card className="border border-primary-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Anuidade Regional Vigente
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+              <div className="w-full sm:w-64">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Valor anual (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={regionalAnualValue}
+                  onChange={(e) =>
+                    setRegionalAnualValue(parseFloat(e.target.value) || 0)
+                  }
+                  className="w-full px-3 py-3 border border-gray-200 rounded-xl bg-white/90"
+                />
+              </div>
+              <Button
+                onClick={handleSaveRegionalAnnualValue}
+                loading={regionalConfigSubmitting}
+              >
+                Salvar Anuidade
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleGenerateAnnualExercise}
+                loading={annualExerciseSubmitting}
+              >
+                Gerar Exercício Anual ({ano})
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              O exercício anual é criado sob comando do administrador regional.
+            </p>
+          </Card>
+        )}
+
+        {isLocalAdmin && financialConfig && (
+          <Card className="border border-primary-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Configuração Financeira Local
+            </h2>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={financialConfig.mensalAtiva}
+                  onChange={(e) =>
+                    setFinancialConfig({
+                      ...financialConfig,
+                      mensalAtiva: e.target.checked,
+                    })
+                  }
+                />
+                Esta fraternidade cobra mensalidade
+              </label>
+
+              <div className="w-full sm:w-64">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Valor mensal local (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  disabled={!financialConfig.mensalAtiva}
+                  value={financialConfig.valorMensal ?? 0}
+                  onChange={(e) =>
+                    setFinancialConfig({
+                      ...financialConfig,
+                      valorMensal: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                />
+              </div>
+
+              <Button
+                onClick={handleSaveLocalMonthlyConfig}
+                loading={localConfigSubmitting}
+              >
+                Salvar Configuração Local
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={handleGenerateMonthlyExercise}
+                loading={monthlyExerciseSubmitting}
+                disabled={!financialConfig.mensalAtiva}
+              >
+                Gerar Mensalidades do Exercício ({ano})
+              </Button>
+              <p className="text-xs text-gray-500">
+                A geração mensal só é permitida quando a mensalidade está ativa para a fraternidade.
+              </p>
+            </div>
+          </Card>
+        )}
+
+          <div className="flex flex-col lg:flex-row gap-2 sm:gap-4 lg:items-center">
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
             <label className="font-medium text-gray-700 text-sm sm:text-base">
               Ano:
             </label>
-            <select
-              value={ano}
-              onChange={(e) => setAno(parseInt(e.target.value))}
-              className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg"
-            >
-              {[2023, 2024, 2025, 2026].map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+            <div className="flex w-full sm:w-auto gap-2">
+              <input
+                type="number"
+                min={2000}
+                max={2100}
+                value={anoInput}
+                onChange={(e) => setAnoInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleApplyYear();
+                  }
+                }}
+                className="w-full sm:w-36 px-4 py-3 border border-gray-200 rounded-xl bg-white/90"
+              />
+              <Button variant="secondary" onClick={handleApplyYear}>
+                Aplicar
+              </Button>
+            </div>
           </div>
+
+          {isRegionalAdmin && (
+            <>
+              <select
+                value={distritoFilter}
+                onChange={(e) => {
+                  setDistritoFilter(e.target.value);
+                  setFraternidadeFilter("TODAS");
+                }}
+                className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/90"
+              >
+                <option value="TODOS">Todos os distritos</option>
+                {distritosDisponiveis.map((distrito) => (
+                  <option key={distrito} value={distrito}>
+                    {distrito}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={fraternidadeFilter}
+                onChange={(e) => setFraternidadeFilter(e.target.value)}
+                className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/90"
+              >
+                <option value="TODAS">Todas as fraternidades</option>
+                {fraternidadesDisponiveis.map((fraternidade) => (
+                  <option key={fraternidade} value={fraternidade}>
+                    {fraternidade}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
 
           <input
             type="text"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome ou email"
-            className="w-full lg:max-w-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+            placeholder={
+              isRegionalAdmin
+                ? "Buscar por nome, email, distrito ou fraternidade"
+                : "Buscar por nome ou email"
+            }
+            className="w-full lg:max-w-sm px-4 py-3 border border-gray-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
 
         <p className="text-sm text-gray-500">
-          Exibindo {relatorioFiltrado.length} de {relatorio.length} membros
+          Exibindo {relatorioFiltrado.length} de {relatorio.length} membros no período
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-primary-600">
+          <Card className="text-center border border-primary-100">
+            <div className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
               {relatorioFiltrado.length}
             </div>
             <p className="text-gray-600 text-sm mt-2">Total de Membros</p>
           </Card>
 
-          <Card className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-green-600">
+          <Card className="text-center border border-emerald-100">
+            <div className="text-3xl sm:text-4xl font-extrabold text-emerald-600">
               {relatorioFiltrado.length - inadimplentes}
             </div>
             <p className="text-gray-600 text-sm mt-2">Em Dia</p>
           </Card>
 
-          <Card className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-red-600">
+          <Card className="text-center border border-red-100">
+            <div className="text-3xl sm:text-4xl font-extrabold text-red-600">
               {inadimplentes}
             </div>
             <p className="text-gray-600 text-sm mt-2">Inadimplentes</p>
           </Card>
         </div>
 
-        <Card>
+        <Card className="border border-primary-100">
           <div className="space-y-4 md:hidden">
             {relatorioFiltrado.map((row) => (
               <div
                 key={row.userId}
-                className="border border-gray-200 rounded-lg p-4 space-y-3"
+                className="border border-gray-200 rounded-2xl p-4 space-y-3 bg-white/90 shadow-sm"
               >
                 <div>
                   <p className="font-semibold text-gray-800">{row.nome}</p>
                   <p className="text-sm text-gray-600 break-all">{row.email}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {row.distrito || "Sem distrito"} - {row.fraternidadeNome || "Sem fraternidade"}
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
@@ -365,13 +746,13 @@ export const AdminContribuicoesPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     onClick={() => handleEditAnnual(row)}
-                    className="w-full py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
+                    className="w-full py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
                   >
                     ✎ Anual
                   </button>
                   <button
                     onClick={() => handleEditMonthly(row)}
-                    className="w-full py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
+                    className="w-full py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
                   >
                     ✎ Mensal
                   </button>
@@ -387,13 +768,19 @@ export const AdminContribuicoesPage: React.FC = () => {
 
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-primary-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     Nome
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                    Distrito
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                    Fraternidade
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                     Tipo
@@ -420,6 +807,12 @@ export const AdminContribuicoesPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {row.email}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {row.distrito || "Sem distrito"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {row.fraternidadeNome || "Sem fraternidade"}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {row.tipoMembro || "—"}
@@ -461,7 +854,7 @@ export const AdminContribuicoesPage: React.FC = () => {
                 {relatorioFiltrado.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={9}
                       className="px-6 py-6 text-center text-sm text-gray-500"
                     >
                       Nenhum membro encontrado para essa busca.
@@ -489,7 +882,7 @@ export const AdminContribuicoesPage: React.FC = () => {
         {editingContribution?.type === "anual" ? (
           <div className="space-y-4">
             <div className="bg-blue-50 p-3 rounded border border-blue-200 text-sm text-blue-800">
-              <p>✓ Contribuição anual criada/encontrada com sucesso.</p>
+              <p>✓ Contribuição anual encontrada para o exercício.</p>
               <p className="mt-1 text-xs">Escolha abaixo o status:</p>
             </div>
             <div>
@@ -531,7 +924,7 @@ export const AdminContribuicoesPage: React.FC = () => {
               <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm text-yellow-800 text-center">
                 <p>⚠️ Nenhuma contribuição mensal encontrada para {ano}</p>
                 <p className="text-xs mt-1">
-                  As contribuições serão criadas quando você salvar.
+                  Gere as mensalidades do exercício para a fraternidade antes de editar.
                 </p>
               </div>
             ) : (
